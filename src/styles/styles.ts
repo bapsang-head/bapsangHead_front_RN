@@ -8,6 +8,14 @@ export const styles = StyleSheet.create({
   scrollView: {
     marginHorizontal: 20,
   },
+
+  weekCalendarList: { //주 단위 캘린더 스타일
+    height: 100, //원하는 높이로 설정
+  },
+  calendarList: { //월 단위 캘린더 스타일
+    height: 350, //원하는 높이로 설정
+  },
+
   header: {
     paddingTop: 20,
     flexDirection: 'row',

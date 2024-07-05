@@ -1,20 +1,24 @@
 //Libarary or styles import
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, Button, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
-import { Calendar, CalendarList, LocaleConfig } from 'react-native-calendars';
+import { View, Text, Button, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
+import { Calendar, CalendarList, LocaleConfig, ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as SplashScreen from 'expo-splash-screen';
 import moment from 'moment';
 import { styles } from './styles/styles';
 
 //svg import
-import MainIcon from './assets/MainIcon';
+// import MainIcon from './assets/MainIcon';
 
 //components import
-import BottomSheetModal from '@components/BottomSheetModal';
+import MainScreen from '@components/MainScreen';
+
+//SplashScreen을 자동으로 숨기지 않도록 설정
+SplashScreen.preventAutoHideAsync();
 
 // Define the type for the navigation stack
 type RootStackParamList = {
@@ -41,127 +45,14 @@ LocaleConfig.locales['ko'] = {
 };
 LocaleConfig.defaultLocale = 'ko';
 
-// Create the stack navigator
+//Stack navigator를 만들기 위한 변수 Stack과 Tab을 만든다
 let Stack = createNativeStackNavigator<RootStackParamList>();
 let Tab = createBottomTabNavigator();
 
-function MainScreen() {
-  const [isCalendarVisible, setIsCalendarVisible] = useState(true); // State to control the visibility of the calendar
-  const bottomSheetRef = useRef<BottomSheet>(null); // Reference for the bottom sheet
-  const currentDate = moment().format('YYYY-MM-DD'); // Get the current date
 
-  // Function to toggle the calendar visibility
-  let toggleCalendar = () => {
-    setIsCalendarVisible(!isCalendarVisible);
-  };
-
-  // Get the week dates for the current date
-  const getWeekDates = (date: moment.MomentInput) => {
-    const startOfWeek = moment(date).startOf('week');
-    return Array.from({ length: 7 }, (_, i) =>
-      startOfWeek.clone().add(i, 'day').format('YYYY-MM-DD')
-    );
-  };
-
-  const weekDates = getWeekDates(currentDate);
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.monthText}>{moment().format('YYYY년 M월')}</Text>
-          <Button title={isCalendarVisible ? "달력 접기" : "달력 펼치기"} onPress={toggleCalendar} />
-        </View>
-
-        {/* Calendar component */}
-        {isCalendarVisible ? (
-          <CalendarList
-            current={currentDate}
-            markedDates={{
-              [currentDate]: { selected: true, marked: true, selectedColor: 'green' },
-            }}
-            hideExtraDays
-            theme={{
-              calendarBackground: 'white',
-              textSectionTitleColor: 'black',
-              selectedDayBackgroundColor: 'green',
-              selectedDayTextColor: 'white',
-              todayTextColor: 'green',
-              dayTextColor: 'black',
-              textDisabledColor: 'gray',
-              dotColor: 'green',
-              selectedDotColor: 'green',
-              arrowColor: 'black',
-              monthTextColor: 'black',
-              indicatorColor: 'green',
-              textDayFontWeight: '300',
-              textMonthFontWeight: 'bold',
-              textDayHeaderFontWeight: '500',
-              textDayFontSize: 16,
-              textMonthFontSize: 16,
-              textDayHeaderFontSize: 14,
-            }}
-            horizontal
-            pagingEnabled
-            hideDayNames
-            showScrollIndicator={false}
-            style={{ height: 350 }}  // 원하는 높이로 설정합니다.
-          />
-        ) : (
-          <View style={styles.weekContainer}>
-            {weekDates.map((date) => (
-              <View key={date} style={styles.dayContainer}>
-                <Text style={date === currentDate ? styles.selectedDay : styles.day}>
-                  {moment(date).format('D')}
-                </Text>
-                <Text style={date === currentDate ? styles.selectedDayText : styles.dayText}>
-                  {moment(date).format('dd')}
-                </Text>
-              </View>
-            ))}
-          </View>
-)}
-
-
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>아침 식사</Text>
-          </TouchableOpacity>
-          <Text>아직 추가된 식단이 없어요!</Text>
-          <Button title="텍스트로 기록하기" onPress={() => {}} />
-        </View>
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>점심 식사</Text>
-          </TouchableOpacity>
-          <Text>3,982kcal</Text>
-          <Text>삼겹살 1근</Text>
-          <Text>BBQ 황금올리브 1마리</Text>
-          <Text>코카콜라 제로 1캔</Text>
-          <Text>멸치쇼핑 땅콩 1줌</Text>
-          <Button title="수정하기" onPress={() => {}} />
-          <Button title="세부 영양성분" onPress={() => {}} />
-        </View>
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>저녁 식사</Text>
-          </TouchableOpacity>
-          <Text>1234</Text>
-        </View>
-      </ScrollView>
-      <BottomSheet ref={bottomSheetRef} snapPoints={['9%', '24%']}>
-        <View style={styles.bottomSheetContent}>
-          <Text>나의 일일 칼로리 섭취 현황 확인하기</Text>
-          {/* <Button title="닫기" onPress={() => bottomSheetRef.current?.close()} /> */}
-          <BottomSheetModal onClose={false} MyActivity={3250} TodayEatenCalories={990}/>
-        </View>
-      </BottomSheet>
-    </SafeAreaView>
-  );
-}
-
-// Details screen component
+//상세 화면 component
 function DetailsScreen() {
+  console.log("Detail rendering");
   return (
     <SafeAreaView style={styles.container}>
       <Text>Details Screen</Text>
@@ -169,8 +60,9 @@ function DetailsScreen() {
   );
 }
 
-//MyPage screen component
+//MyPage 화면 component
 function MyPageScreen() {
+  console.log("MyPage rendering");
   return (
     <SafeAreaView style={styles.container}>
       <Text>MyPage Screen</Text>
@@ -179,17 +71,19 @@ function MyPageScreen() {
 }
 
 
-// Bottom Tab Navigator component
+//하단 Tab Navigator Component
 function TabNavigator() {
+  console.log("TabNavigator rendering");
   return (
     <Tab.Navigator>
-      <Tab.Screen name="Main" 
+      <Tab.Screen 
+        name="Main" 
         component={MainScreen} 
         options={{ 
           tabBarLabel: '메인',
-          tabBarIcon: ({ color, size }) => (
-            <MainIcon darkMode={false} size={32} color={'red'}/>
-          ),
+          // tabBarIcon: ({ color, size }) => (
+          //   <MainIcon darkMode={false} size={32} color={'red'}/>
+          // ),
           }} />
       <Tab.Screen name="Details" component={DetailsScreen} options={{ tabBarLabel: '상세' }} />
       <Tab.Screen name="MyPage" component={MyPageScreen} options={{ 
@@ -202,15 +96,31 @@ function TabNavigator() {
   );
 }
 
-// Main App component
+//최상위 App Component
 function App() {
+
+  useEffect(() => {
+    async function prepare() //prepare 함수를 정의한다
+    {
+      try {
+        //내가 필요한 리소스를 가져오는 동안 splash screen을 보여준다 (여기에 리소스 가져오는 코드를 집어 넣는다)
+        //아래 코드는 인위적으로 2초를 기다리는 코드이다
+        await new Promise(resolve => setTimeout(resolve, 2000)); 
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        //Resource 로드가 완료 되면, SplashScreen을 숨긴다
+        await SplashScreen.hideAsync();
+      }
+    }
+    
+    prepare() //prepare 함수 실행
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Home">
-          <Stack.Screen name="Home" component={TabNavigator} options={{ headerShown: false }} />
-          <Stack.Screen name="Details" component={DetailsScreen} />
-        </Stack.Navigator>
+        <TabNavigator/> 
       </NavigationContainer>
     </GestureHandlerRootView>
   );
