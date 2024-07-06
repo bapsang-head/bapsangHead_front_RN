@@ -4,10 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Button, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
-//import { Calendar, CalendarList, LocaleConfig, ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
+import { Calendar, CalendarList, LocaleConfig, ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
 import BottomSheet from '@gorhom/bottom-sheet';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as SplashScreen from 'expo-splash-screen';
 import moment from 'moment';
 import { styles } from '../styles/styles';
 
@@ -17,12 +15,28 @@ import MainIcon from '../assets/MainIcon';
 //components import
 import BottomSheetModal from '@components/BottomSheetModal';
 
+//Calendar 구성 요소들을 설정
+LocaleConfig.locales['ko'] = {
+  monthNames: [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월'
+  ],
+  monthNamesShort: [
+    '1.', '2.', '3.', '4.', '5.', '6.',
+    '7.', '8.', '9.', '10.', '11.', '12.'
+  ],
+  dayNames: [
+    '일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'
+  ],
+  dayNamesShort: [
+    '일', '월', '화', '수', '목', '금', '토'
+  ]
+};
+
+LocaleConfig.defaultLocale = 'ko'; //기본 locale을 한국으로 설정
+
 //메인화면 Component
 function MainScreen() {
-
-    console.log("MainScreen rendering");
-
-
     const bottomSheetRef = useRef<BottomSheet>(null); // Reference for the bottom sheet
     const currentDate = moment().format('YYYY-MM-DD'); //현재 날짜(currentDate)를 YYYY-MM-DD 형식으로 가져온다
   
@@ -30,7 +44,6 @@ function MainScreen() {
     let [isCalendarVisible, setIsCalendarVisible] = useState(true); //Calendar의 visibility를 관리한다
     let [currentMonth, setCurrentMonth] = useState(new Date().toISOString().split('T')[0]); // 초기값 현재 날짜
     let [selectedDate, setSelectedDate] = useState(currentDate); //선택된 날짜를 관리한다
-    let [appIsReady, setAppIsReady] = useState(false) //앱이 준비되었는지 여부를 관리한다
   
 
     //날짜를 선택했을 때 호출되는 함수 onDayPress를 정의한다
@@ -71,7 +84,29 @@ function MainScreen() {
             <Text style={styles.monthText}>{year}년 {month}월</Text>
             <Button title={isCalendarVisible ? "달력 접기" : "달력 펼치기"} onPress={toggleCalendar} />
           </View>
-  
+
+          {/* 캘린더 Component를 접거나 필 구역임 */}
+          {isCalendarVisible ? (
+            <CalendarList
+              style={{
+                width: Dimensions.get('window').width,
+                alignSelf: 'center',
+                overflow: 'hidden',
+              }}
+              theme={{
+                calendarBackground: "transparent"
+              }}
+              current={currentDate}
+              onDayPress={onDayPress}
+              horizontal={true}
+              pagingEnabled={true}
+              onVisibleMonthsChange={onVisibleMonthsChange}
+              markedDates={{
+                [selectedDate]: { selected: true, selectedColor: 'blue' }
+              }}
+            />
+          ) : null}
+          
           <View style={styles.section}>
             <TouchableOpacity style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>아침 식사</Text>

@@ -4,8 +4,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Button, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
-import { Calendar, CalendarList, LocaleConfig, ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
-import BottomSheet from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import moment from 'moment';
@@ -25,25 +23,6 @@ type RootStackParamList = {
   Home: undefined;
   Details: undefined;
 };
- 
-//Calendar 구성 요소들을 설정
-LocaleConfig.locales['ko'] = {
-  monthNames: [
-    '1월', '2월', '3월', '4월', '5월', '6월',
-    '7월', '8월', '9월', '10월', '11월', '12월'
-  ],
-  monthNamesShort: [
-    '1.', '2.', '3.', '4.', '5.', '6.',
-    '7.', '8.', '9.', '10.', '11.', '12.'
-  ],
-  dayNames: [
-    '일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'
-  ],
-  dayNamesShort: [
-    '일', '월', '화', '수', '목', '금', '토'
-  ]
-};
-LocaleConfig.defaultLocale = 'ko';
 
 //Stack navigator를 만들기 위한 변수 Stack과 Tab을 만든다
 let Stack = createNativeStackNavigator<RootStackParamList>();
