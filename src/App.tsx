@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import moment from 'moment';
 import { styles } from './styles/styles';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context'; // 추가된 부분
 
 
 //components import
@@ -30,9 +31,7 @@ type RootStackParamList = {
 function DetailsScreen() {
   console.log("Detail rendering");
   return (
-    <SafeAreaView style={styles.container}>
       <Text>Details Screen</Text>
-    </SafeAreaView>
   );
 }
 
@@ -40,9 +39,7 @@ function DetailsScreen() {
 function MyPageScreen() {
   console.log("MyPage rendering");
   return (
-    <SafeAreaView style={styles.container}>
-      <Text>MyPage Screen</Text>
-    </SafeAreaView>
+    <Text>MyPage Screen</Text>
   );
 }
 
@@ -167,11 +164,14 @@ function App(props: any) {
   {/* SafeAreaView로 감싸서 상단 StatusBar를 고려한다 (아이폰 M자 탈모 대비)*/}
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <NavigationContainer theme={navTheme}>
-          <StackNavigation/> 
-        </NavigationContainer>
-      </SafeAreaView>
+      {/* SafeAreaProvider로 감싸줌 */}
+      <SafeAreaProvider> 
+        <SafeAreaView style={styles.container}>
+          <NavigationContainer theme={navTheme}>
+            <StackNavigation/> 
+          </NavigationContainer>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

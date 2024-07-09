@@ -28,12 +28,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 //     );
 // }
 
-
 function TextInputScreen({route, navigation, appState}){
     console.log("TextInputScreen Rendering");
     return (
         <View>
-            <Text>음식을 입력해주세요</Text>
+            <Text>TextInputScreen</Text>
         </View>
     );
 }

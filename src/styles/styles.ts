@@ -1,11 +1,14 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform, StatusBar } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
+    //SafeAreaView는 Android 기기들에서 작동하지 않음. 따라서 Platform에 따라 다르게 적용
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  
   scrollView: {
     marginHorizontal: 20,
   },
