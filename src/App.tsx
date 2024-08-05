@@ -9,12 +9,22 @@ import * as SplashScreen from 'expo-splash-screen';
 import moment from 'moment';
 import { styles } from './styles/styles';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
-import { SafeAreaProvider } from 'react-native-safe-area-context'; // 추가된 부분
+import { SafeAreaProvider } from 'react-native-safe-area-context'; //iOS M자 탈모 대비
+
+//Redux 라이브러리를 사용하기 위해 최상위 컴포넌트에 연결해야 한다. <Provider>와 store.js를 import한다.
+import { Provider } from 'react-redux';
+import store from './store'
 
 
-//components import
-import MainScreen from '@components/MainScreen';
-import TextInputScreen from '@components/TextInputScreen';
+//components(Screen들이라고 생각하면 됩니다) import
+import MainScreen from '@screens/MainScreen';
+import TextInputScreen from '@screens/TextInputScreen';
+import DetailScreen from '@screens/DetailScreen';
+import MyPageScreen from '@screens/MyPageScreen';
+import LoginScreen from '@screens/LoginScreen';
+import SettingScreen from '@screens/SettingScreen';
+import ActivityLevelFixScreen from '@screens/ActivityLevelFixScreen';
+import FixBasicDataScreen from '@screens/FixBasicDataScreen';
 
 //SplashScreen을 자동으로 숨기지 않도록 설정
 SplashScreen.preventAutoHideAsync();
@@ -26,22 +36,6 @@ type RootStackParamList = {
   Details: undefined;
   MyPage: undefined;
 };
-
-//상세 화면 component
-function DetailsScreen() {
-  console.log("Detail rendering");
-  return (
-      <Text>Details Screen</Text>
-  );
-}
-
-//MyPage 화면 component
-function MyPageScreen() {
-  console.log("MyPage rendering");
-  return (
-    <Text>MyPage Screen</Text>
-  );
-}
 
 
 //Tab으로 오고 갈 수 있는 3가지 화면을 정의한다 (MaterialBottomTabNavigator를 사용)
@@ -73,7 +67,7 @@ function TabNavigator() {
         />
       <Tab.Screen 
         name="Details" 
-        component={DetailsScreen}
+        component={DetailScreen}
         options={{
           tabBarLabel: 'Details',
           tabBarIcon: ({color, size}) => (
@@ -97,36 +91,16 @@ function TabNavigator() {
 let Stack = createNativeStackNavigator();
 
 function StackNavigation() {
-  let navigation = useNavigation(); //StackNavigator 컴포넌트에서 navigation을 사용하기 위해 useNavigation 훅을 사용한다
   console.log("Stack Navigation Rendering");
+  
   return (
     <Stack.Navigator>
+      <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }} /> 
+      <Stack.Screen name="SettingScreen" component={SettingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TabNavigator" component={TabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="TextInputScreen"
-        component={TextInputScreen} 
-        options={{ 
-          //header를 커스텀으로 설정할 수 있다
-          title: '입력',
-          // header: (props) =>
-          // (
-          //   <View style={{height : 80}}>
-          //   </View>
-          // ), 
-          headerStyle: {
-            backgroundColor: '#FFFFFF'
-          },
-          headerLeft: () => (
-            <TouchableOpacity onPress={()=>{navigation.goBack()}}>
-              <MaterialCommunityIcons name="chevron-left" size={24}/>
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={()=>{alert('Done pressed!')}}>
-              <Text>완료</Text>
-            </TouchableOpacity>
-          )
-        }} />
+      <Stack.Screen name="TextInputScreen" component={TextInputScreen}/>
+      <Stack.Screen name="ActivityLevelFixScreen" component={ActivityLevelFixScreen} />
+      <Stack.Screen name="FixBasicDataScreen" component={FixBasicDataScreen}/>
     </Stack.Navigator>
   );
 }
@@ -136,7 +110,7 @@ const navTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: '#FFFFFF',
+    background: '#FFFFFF', //흰색으로 설정한다
   },
 };
 
@@ -163,16 +137,18 @@ function App(props: any) {
 
   {/* SafeAreaView로 감싸서 상단 StatusBar를 고려한다 (아이폰 M자 탈모 대비)*/}
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* SafeAreaProvider로 감싸줌 */}
-      <SafeAreaProvider> 
-        <SafeAreaView style={styles.container}>
-          <NavigationContainer theme={navTheme}>
-            <StackNavigation/> 
-          </NavigationContainer>
-        </SafeAreaView>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <Provider store={store}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        {/* SafeAreaProvider로 감싸줌 */}
+        <SafeAreaProvider> 
+          <SafeAreaView style={styles.container}>
+            <NavigationContainer theme={navTheme}>
+              <StackNavigation/> 
+            </NavigationContainer>
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </Provider>
   );
 }
 

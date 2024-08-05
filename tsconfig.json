@@ -3,17 +3,19 @@
     "jsx": "react",
     "baseUrl": "./",
     "paths": {
-      "@components/*": ["src/components/*"],
       "@screens/*": ["src/screens/*"],
+      "@components/*": ["src/components/*"],
       "@assets/*": ["src/assets/*"],
-      "@styles/*": ["src/styles/*"]
+      "@styles/*": ["src/styles/*"],
+      "@env": ["env"]
     }
   },
   "extends": "expo/tsconfig.base",
   "include": [
+    "src",
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.d.ts",
-    "../declarations.d.ts" // 또는 특정 위치에 declarations.d.ts 파일이 있다면 해당 경로로 변경
+    "src/declarations.d.ts" // 또는 특정 위치에 declarations.d.ts 파일이 있다면 해당 경로로 변경
   ]
 }

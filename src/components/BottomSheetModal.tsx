@@ -24,6 +24,8 @@ function BottomSheetModal(props) {
             width={parentWidth} 
             height={10}
             animationConfig={{bounciness: 20}} 
+            borderWidth={0}//테두리 없애기
+            unfilledColor='lightgrey'//안 채워진 곳에 대한 색상 설정
             color={'green'}
             borderRadius={10}/>
             <View style={styles.row}>
@@ -63,4 +65,4 @@ const styles = StyleSheet.create({
     }
   });
 
-  export default BottomSheetModal;
+export default BottomSheetModal;

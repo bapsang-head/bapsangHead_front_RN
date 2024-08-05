@@ -12,17 +12,28 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bapsanghead.project"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.bapsanghead.project"
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
+          }
+        }
+      ]
+    ]
   }
 }
-
