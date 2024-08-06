@@ -7,6 +7,12 @@ import { styles } from '../styles/styles';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 
+import axios, {isCancel, AxiosError} from 'axios';
+
+//redux-toolkit을 사용하기 위한 import
+import { useSelector, useDispatch } from "react-redux"
+import { RootState, AppDispatch, setHeight, setWeight, setAge, setGender, setActivityLevel } from "../store";
+
 //SVG 파일들 Import
 import HeightIcon from '../assets/svg/height.svg';
 import WeightIcon from '../assets/svg/scale.svg';
@@ -38,13 +44,44 @@ function SettingScreen_Page1() {
 //두 번째 설정 화면
 function SettingScreen_Page2() { 
     
-    let [height, setHeight] = useState(''); //키
-    let [weight, setWeight] = useState(''); //몸무게
-    let [age, setAge] = useState(''); //나이
-    let [gender, setGender] = useState(''); //성별
+    // let [height, setHeight] = useState(''); //키
+    // let [weight, setWeight] = useState(''); //몸무게
+    // let [age, setAge] = useState(''); //나이
+    // let [gender, setGender] = useState(''); //성별
     
     let [manPressed, setManPressed] = useState(false); //남자 버튼이 눌렸을 때
     let [womanPressed, setWomanPressed] = useState(false); //여자 버튼이 눌렸을 때
+
+    //실험용 코드 (redux-toolkit으로 accountInfo를 전역적으로 관리하고 있음)
+    let accountInfo = useSelector((state: RootState) => state.accountInfo);
+
+    console.log(accountInfo);
+
+    //아래 3개의 값만 필요할 듯 (gender는 버튼 선택으로 정해지니까..)
+    let height = accountInfo.height;
+    let weight = accountInfo.weight;
+    let age = accountInfo.age;
+
+    //accountInfo를 업데이트하기 위한 코드
+    const dispatch: AppDispatch = useDispatch();
+    
+    //height 입력값을 handling
+    const handleHeightChange = (text: string) => {
+        const heightValue = text ? parseInt(text, 10) : null;
+        dispatch(setHeight(heightValue))
+    };
+
+    //weight 입력값을 handling
+    const handleWeightChange = (text: string) => {
+        const weightValue = text ? parseInt(text, 10) : null;
+        dispatch(setWeight(weightValue));
+    };
+
+    //age 입력값을 handling
+    const handleAgeChange = (text: string) => {
+        const ageValue = text ? parseInt(text, 10) : null;
+        dispatch(setAge(ageValue));
+    };
 
 
     return (
@@ -61,10 +98,11 @@ function SettingScreen_Page2() {
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16}}>
                     <TextInput
                         style={[styles.settingInputButton, {flex: 1}]}
-                        onChangeText={setHeight}
-                        value={height}
+                        onChangeText={handleHeightChange}
+                        value={height !== null ? height.toString() : ''}
                         placeholder="178"
-                        placeholderTextColor={'#a8a8a8'}/>
+                        placeholderTextColor={'#a8a8a8'}
+                        keyboardType="numeric"/>
                     <Text style={{fontSize: 24, fontWeight: 'bold', marginLeft: 8}}>cm</Text>
                 </View>
 
@@ -76,10 +114,11 @@ function SettingScreen_Page2() {
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16}}>
                     <TextInput
                         style={[styles.settingInputButton, {flex: 1}]}
-                        onChangeText={setWeight}
-                        value={weight}
+                        onChangeText={handleWeightChange}
+                        value={weight !== null ? weight.toString() : ''}
                         placeholder="72"
-                        placeholderTextColor={'#a8a8a8'}/>
+                        placeholderTextColor={'#a8a8a8'}
+                        keyboardType="numeric"/>
                     <Text style={{fontSize: 24, fontWeight: 'bold', marginLeft: 8}}>kg</Text>
                 </View>
 
@@ -92,10 +131,11 @@ function SettingScreen_Page2() {
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16}}>
                     <TextInput
                         style={[styles.settingInputButton, {flex: 1}]}
-                        onChangeText={setAge}
-                        value={age}
+                        onChangeText={handleAgeChange}
+                        value={age !== null ? age.toString() : ''}
                         placeholder="25"
-                        placeholderTextColor={'#a8a8a8'}/>
+                        placeholderTextColor={'#a8a8a8'}
+                        keyboardType="numeric"/>
                     <Text style={{fontSize: 24, fontWeight: 'bold', marginLeft: 8}}>세</Text>
                 </View>
 
@@ -115,9 +155,11 @@ function SettingScreen_Page2() {
                             if(manPressed)
                             {
                                 setManPressed(false);
+                                dispatch((setGender(null))); //gender 선택 null
                             } else {
                                 setWomanPressed(false);
                                 setManPressed(true);
+                                dispatch((setGender('MALE'))); //gender 선택 null
                             }
                         }}  
                         style={{flex: 3}}>
@@ -144,9 +186,11 @@ function SettingScreen_Page2() {
                             if(womanPressed)
                             {
                                 setWomanPressed(false);
+                                dispatch((setGender(null))); //gender 선택 null
                             } else {
                                 setManPressed(false);
                                 setWomanPressed(true);
+                                dispatch((setGender('FEMALE'))); //gender 선택 null
                             }
                         }} 
                         style={{flex: 3}}>
@@ -177,6 +221,11 @@ function SettingScreen_Page2() {
 function SettingScreen_Page3() {
 
     let [selectedActivityLevel, setSelectedActivityLevel] = useState('');
+
+    //accountInfo를 업데이트하기 위한 코드
+    const dispatch: AppDispatch = useDispatch();
+
+    
     
     return (
         <View style={styles.container}>
@@ -189,7 +238,10 @@ function SettingScreen_Page3() {
             {/* '평소 활동이 적습니다' 버튼 */}
             {
                 selectedActivityLevel === 'light' ? (
-                    <TouchableOpacity onPress={()=>{setSelectedActivityLevel('')}}>
+                    <TouchableOpacity onPress={()=>{
+                        setSelectedActivityLevel(''); 
+                        dispatch(setActivityLevel(null));
+                        }}>
                         <View style={[styles.activityLevelButton, {backgroundColor: '#f2fcde'}]}>
                             <NoExerciseIcon width={40} height={40} fillOpacity={1}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
@@ -199,7 +251,10 @@ function SettingScreen_Page3() {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity onPress={()=>{setSelectedActivityLevel('light')}}>
+                    <TouchableOpacity onPress={()=>{
+                        setSelectedActivityLevel('light');
+                        dispatch(setActivityLevel('LOW(평소 활동량이 적습니다.)'));
+                        }}>
                         <View style={styles.activityLevelButton}>
                             <NoExerciseIcon width={40} height={40} fillOpacity={0.3}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 0.3}}>
@@ -214,7 +269,7 @@ function SettingScreen_Page3() {
             {/* '평소 가볍게 운동합니다' 버튼 */}
             {
                 selectedActivityLevel === 'lightActive' ? (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('')}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel(''); dispatch(setActivityLevel(null)); }}>
                         <View style={[styles.activityLevelButton, {backgroundColor: '#FFF8D5'}]}>
                             <LittleExerciseIcon width={40} height={40} fillOpacity={1}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
@@ -224,7 +279,7 @@ function SettingScreen_Page3() {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('lightActive')}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('lightActive'); dispatch(setActivityLevel('LIGHT(평소 가볍게 운동합니다.)'));}}>
                         <View style={styles.activityLevelButton}>
                             <LittleExerciseIcon width={40} height={40} fillOpacity={0.3}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 0.3}}>
@@ -239,7 +294,7 @@ function SettingScreen_Page3() {
             {/* '활동적인 편입니다' 버튼 */}
             {
                 selectedActivityLevel === 'active' ? (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('')}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel(''); dispatch(setActivityLevel(null));}}>
                         <View style={[styles.activityLevelButton, {backgroundColor: '#FFC3A1'}]}>
                             <ExerciseIcon width={40} height={40} fillOpacity={1}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
@@ -249,7 +304,7 @@ function SettingScreen_Page3() {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('active')}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('active'); dispatch(setActivityLevel('MEDIUM(활동적인 편입니다.)'));}}>
                         <View style={styles.activityLevelButton}>
                             <ExerciseIcon width={40} height={40} fillOpacity={0.3}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 0.3}}>
@@ -264,7 +319,7 @@ function SettingScreen_Page3() {
             {/* '운동 없으면 못삽니다.' 버튼 */}
             {
                 selectedActivityLevel === 'veryActive' ? (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('')}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel(''); dispatch(setActivityLevel(null));}}>
                         <View style={[styles.activityLevelButton, {backgroundColor: '#FFCED7'}]}>
                             <MuchExerciseIcon width={40} height={40} fillOpacity={1}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
@@ -274,7 +329,7 @@ function SettingScreen_Page3() {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('veryActive')}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('veryActive'); dispatch(setActivityLevel('HIGH(운동 없으면 못삽니다.)'));}}>
                         <View style={styles.activityLevelButton}>
                             <MuchExerciseIcon width={40} height={40} fillOpacity={0.3}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 0.3}}>
@@ -297,6 +352,49 @@ let StackInFirstSettings = createNativeStackNavigator();
 function SettingScreen({Stack, navigation}) {
 
     console.log('setting screen rendering');
+
+    //실험용 코드 (redux-toolkit으로 accountInfo를 전역적으로 관리하고 있음)
+    let accountInfo = useSelector((state: RootState) => state.accountInfo);
+
+    //받은 정보를 바탕으로 서버에 데이터를 전송하는 function (axios 사용 예정)
+    async function registerAccount() {
+
+        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/auth/register`; //post 요청에 사용할 url 설정
+
+        //request body에 포함될 데이터 정의
+        const data = {
+            height: accountInfo.height,
+            weight: accountInfo.weight,
+            age: accountInfo.age,
+            gender: accountInfo.gender,
+            activityLevel: accountInfo.activityLevel
+        };
+
+        console.log(data);
+
+        //"Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
+        //axios를 이용한 post 요청에 관하여 시도하는 try-catch 구문
+        try {
+            const response = await axios.post(url, data, {
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                },
+            })
+            
+            //응답 데이터에서에서 "isRegistered", "name" 속성을 추출하여 로그에 출력
+            console.log('userID가 뭐임? => ', response.data.userId);
+            console.log('refreshToken이 뭐임? => ', response.data.refreshToken);
+
+        } catch (error) {
+            if(error.response) {
+                console.error('Response error: ', error.response.data);
+            } else if(error.request) {
+                console.error('Request error: ', error. request);
+            } else {
+                console.error('Error: ', error.message);
+            }
+        }
+    }
 
     return (
         <StackInFirstSettings.Navigator>
@@ -365,7 +463,7 @@ function SettingScreen({Stack, navigation}) {
                         </TouchableOpacity>
                       ),
                     headerRight: () => (
-                      <TouchableOpacity onPress={()=>{navigation.navigate('TabNavigator')}}>
+                      <TouchableOpacity onPress={()=>{registerAccount(); navigation.navigate('TabNavigator')}}>
                         <Text style={{fontSize: 20}}>완료</Text>
                       </TouchableOpacity>
                     ) 

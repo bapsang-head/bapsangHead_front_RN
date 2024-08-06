@@ -1,8 +1,8 @@
 //Libarary or styles import
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
-import BottomSheet from '@gorhom/bottom-sheet';
+import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, Animated, SafeAreaView } from 'react-native';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import moment from 'moment';
 import { styles } from '../styles/styles';
 
@@ -28,6 +28,8 @@ import {
 import BottomSheetModal from '@components/BottomSheetModal';
 import Calendar from '@components/Calendar';
 import CalendarFolded from '@components/CalendarFolded';
+import DetailBottomSheetModal from '@components/DetailBottomSheetModal'
+import { BottomSheetDefaultBackdropProps } from '@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types';
 
 //메인화면 Component
 function MainScreen({route, navigation}) {
@@ -35,11 +37,14 @@ function MainScreen({route, navigation}) {
   const bottomSheetRef = useRef<BottomSheet>(null); // Reference for the bottom sheet
   const detailBottomSheetRef = useRef(null); //세부 영양성분에 관한 Bottom Sheet Reference
 
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
   
 
   let [currentDate, setCurrentDate] = useState(new Date()); //현재 Date(날짜) 가져오기
   let [isCalendarFolded, setIsCalendarFolded] = useState(false); //Calendar의 visibility를 관리한다
   let [isSectionFolded, setIsSectionFolded] = useState([true, true, true]); //아침,점심,저녁 식사를 표시한 section을 접었다 폈다 하는 state
+
 
   //section을 접고, 피고, 할 수 있도록 하는 함수
   //배열로 된 state는 상태를 변경할 때, 아래와 같은 형태를 따라야 한다
@@ -63,18 +68,38 @@ function MainScreen({route, navigation}) {
   }, [isCalendarFolded]);
 
   //'세부 영양성분' 내용을 담은 Bottom Sheet를 보여주는 함수 showDetailBottomSheet
-  // const showDetailBottomSheet = useCallback(() => {
-  //   navigation.setOptions({tabBarStyle: {display: 'none'}});
-  //   detailBottomSheetRef.current?.present();
-  // }, [navigation]);
+  const showDetailBottomSheet = useCallback(() => {
+    setIsDetailModalOpen(true);
+    navigation.setOptions({tabBarStyle: {display: 'none'}});
+    bottomSheetRef.current.close();
+    detailBottomSheetRef.current.snapToIndex(0);
+  }, [navigation]);
 
   //Sheet의 변화를 감지하는 handleSheetChanges(gorhom/bottom-sheet 라이브러리는 인덱스로 -1 값이 들어올 경우, bottomsheet가 닫혔다는 뜻이다)
-  // const handleSheetChanges = useCallback((index: number) => {
-  //   if (index === -1)
-  //   {
-  //     navigation.setOptions({ tabBarStyle: {display: 'flex'}});
-  //   }
-  // }, [navigation]);
+  const handleSheetChanges = useCallback((index: number) => {
+    if(index === -1) //bottom sheet가 닫혔을 때
+    {
+      setIsDetailModalOpen(false);
+      navigation.setOptions({ tabBarStyle: {display: 'flex'}});
+      bottomSheetRef.current.snapToIndex(0); //기존의 bottom sheet 다시 표시
+    } //detailBottomSheet가 닫힌 후 실행되도록 약간의 딜레이 추가
+    
+  }, [navigation]);
+
+  //커스텀 backdrop component
+  const renderBackDrop = useCallback(
+    (props) => (
+      <BottomSheetBackdrop
+        {...props}
+        opacity={0.5} //투명도 설정
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'gray'}}
+      />
+    ),
+    []
+  );
+  
 
   //현재 월과 연도를 추출한다
   //date-fns 라이브러리의 getMonth는 1월달이 0부터 시작한다(즉, +1 해주어야 한다)
@@ -204,7 +229,7 @@ function MainScreen({route, navigation}) {
                         </View>
                       </TouchableOpacity>
                       <View style={{flex: 1}}></View>
-                      <TouchableOpacity onPress={()=>{}} style={{flex: 3}}>
+                      <TouchableOpacity onPress={showDetailBottomSheet} style={{flex: 3}}>
                         <View style={styles.section_Button_short}>
                           <WatchDetailsIcon height={20} width={20} opacity={1}/>
                           <Text style={{textAlign: 'center', marginLeft: 8, fontSize: 14}}>세부 영양성분</Text>
@@ -255,23 +280,31 @@ function MainScreen({route, navigation}) {
               </View>
             </ScrollView>
           </View>
+
           <BottomSheet 
             ref={bottomSheetRef} 
+            index={0} //초기 index를 명확히 설정
             snapPoints={['8%', '24%']}
-            enablePanDownToClose={false}>
+            enablePanDownToClose={false}
+            style={{ display: isDetailModalOpen ? 'none' : 'flex'}}> 
             <View style={styles.bottomSheetContent}>
               <Text>나의 일일 칼로리 섭취 현황 확인하기</Text>
               <BottomSheetModal onClose={false} MyActivity={3250} TodayEatenCalories={1000}/>
             </View>
           </BottomSheet>
-          {/* <BottomSheet
+
+          <BottomSheet
             ref={detailBottomSheetRef}
-            snapPoints={['20%']}
-            onChange={handleSheetChanges}>
+            index={-1} //초기 index를 명확히 설정
+            snapPoints={['60%']}
+            enablePanDownToClose={true} //스크롤로 닫을 수 있도록 설정
+            onChange={handleSheetChanges} //인덱스 변화 감지
+            backdropComponent={renderBackDrop} //Custom Backdrop 적용
+            >
             <View>
-              <Text>안뇽하세요?</Text>
+              <DetailBottomSheetModal onClose={false}/>
             </View>
-          </BottomSheet> */}
+          </BottomSheet>
         </>
         )
       }

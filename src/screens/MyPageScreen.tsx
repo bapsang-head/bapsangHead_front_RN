@@ -17,8 +17,22 @@ import ExerciseIcon from '../assets/svg/directions_run.svg';
 import MuchExerciseIcon from '../assets/svg/exercise.svg';
 import LogoutIcon from '../assets/svg/logout.svg';
 
+//redux-toolkit을 사용하기 위한 import
+import { useSelector, useDispatch } from "react-redux"
+import { RootState, AppDispatch, setHeight, setWeight, setAge, setGender, setActivityLevel } from "../store";
+
 
 function MyPageScreen({route, navigation}) {
+
+    //accountInfo를 초기화하기 위한 코드
+    const dispatch: AppDispatch = useDispatch();
+    function initializeAccountInfo() {
+        dispatch(setHeight(null));
+        dispatch(setWeight(null));
+        dispatch(setAge(null));
+        dispatch(setGender(null));
+        dispatch(setActivityLevel(null));
+    }
 
     //활동량 수정창으로 이동하는 Action
     function moveToActivityLevelFixScreen() {
@@ -53,6 +67,7 @@ function MyPageScreen({route, navigation}) {
             if (logOutString != null) {
                 setIsLogOut(true); //로그인 여부를 true로 변경
                 console.log(logOutString); //받아온 정보 log에 찍어보기
+                initializeAccountInfo(); //회원 정보 초기화
                 moveToLoginScreen(); //로그인 창으로 다시 이동한다
             } else {
                 console.log('로그아웃 정상적으로 안됨!')

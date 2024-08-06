@@ -17,9 +17,14 @@ function LoginScreen({route, navigation})
     let [kakaoLoginResponse, setKakaoLoginResponse] = useState(null); //카카오 로그인을 최초로 하면 여기에 부가 정보들을 받아올 것이다
     let [profile, setProfile] = useState(null); //카카오 프로필 정보를 관리하는 state
 
-    //카카오 로그인이 이미 되어 있는 경우엔 세팅하는 화면으로 이동하는 것 수행
+    //카카오 로그인이 성공적으로 되었는데, 회원가입이 안되어 있는 경우(isRegistered===false)이면, 세팅 화면으로 가야 한다
     function moveToSettingScreen(){
         navigation.navigate('SettingScreen');
+    }
+
+    //카카오 로그인이 성공적으로 되었는데, 회원가입이 되어 있는 경우(isRegistered===true)이면, 메인으로 바로 가야 한다
+    function moveToMainScreen(){
+        navigation.navigate('TabNavigator');
     }
 
     //'Cannot update a component ('...') while rendering a different component ('...') 문제를 해결하기 위해서 useEffect를 사용한다
@@ -42,8 +47,6 @@ function LoginScreen({route, navigation})
         try {
             kakaoLoginResponse = await KakaoLogins.login(); //카카오 로그인 수행
             if (kakaoLoginResponse != null) {
-                // setIsLogin(true); //로그인 여부를 true로 변경
-                console.log(kakaoLoginResponse.accessToken); //받아온 정보 log에 찍어보기
 
                 //request body에 포함될 데이터 정의
                 const data = {
@@ -64,8 +67,16 @@ function LoginScreen({route, navigation})
                     //응답 데이터에서에서 "isRegistered", "name" 속성을 추출하여 로그에 출력
                     console.log('가입됨? => ', response.data.isRegistered);
                     console.log('이름이 뭐임? => ', response.data.name);
-                    console.log(response.data);
-                    moveToSettingScreen(); //Setting 스크린으로 간다
+                    console.log('액세스 토큰은? =>', response.data.accessToken);
+
+                    //가입 여부에 따라 가는 곳이 나뉘어져야 한다 
+                    if(response.data.isRegistered)
+                    {
+                        moveToMainScreen(); //메인 화면으로 간다
+                    } else {
+                        moveToSettingScreen(); //Setting 스크린으로 간다
+                    }
+                    
                 } catch (error) {
                     if(error.response) {
                         console.error('Response error: ', error.response.data);

@@ -25,6 +25,7 @@ import LoginScreen from '@screens/LoginScreen';
 import SettingScreen from '@screens/SettingScreen';
 import ActivityLevelFixScreen from '@screens/ActivityLevelFixScreen';
 import FixBasicDataScreen from '@screens/FixBasicDataScreen';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 //SplashScreen을 자동으로 숨기지 않도록 설정
 SplashScreen.preventAutoHideAsync();
@@ -139,7 +140,7 @@ function App(props: any) {
   return (
     <Provider store={store}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        {/* SafeAreaProvider로 감싸줌 */}
+        {/* SafeAreaProvider로 감싸줌*/}
         <SafeAreaProvider> 
           <SafeAreaView style={styles.container}>
             <NavigationContainer theme={navTheme}>
