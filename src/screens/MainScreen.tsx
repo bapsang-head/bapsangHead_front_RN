@@ -24,6 +24,10 @@ import {
   getMonth
   } from 'date-fns'; 
 
+import { useSelector, useDispatch } from "react-redux"
+import { RootState, AppDispatch } from "../store";
+import { setMarkedDate } from '../slices/markedDateSlice'
+
 //components import
 import BottomSheetModal from '@components/BottomSheetModal';
 import Calendar from '@components/Calendar';
@@ -39,9 +43,7 @@ function MainScreen({route, navigation}) {
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  
-
-  let [currentDate, setCurrentDate] = useState(new Date()); //현재 Date(날짜) 가져오기
+  let [pointDate, setPointDate] = useState(new Date()); 
   let [isCalendarFolded, setIsCalendarFolded] = useState(false); //Calendar의 visibility를 관리한다
   let [isSectionFolded, setIsSectionFolded] = useState([true, true, true]); //아침,점심,저녁 식사를 표시한 section을 접었다 폈다 하는 state
 
@@ -82,7 +84,7 @@ function MainScreen({route, navigation}) {
       setIsDetailModalOpen(false);
       navigation.setOptions({ tabBarStyle: {display: 'flex'}});
       bottomSheetRef.current.snapToIndex(0); //기존의 bottom sheet 다시 표시
-    } //detailBottomSheet가 닫힌 후 실행되도록 약간의 딜레이 추가
+    } 
     
   }, [navigation]);
 
@@ -103,8 +105,8 @@ function MainScreen({route, navigation}) {
 
   //현재 월과 연도를 추출한다
   //date-fns 라이브러리의 getMonth는 1월달이 0부터 시작한다(즉, +1 해주어야 한다)
-  let year = getYear(currentDate);
-  let month = (getMonth(currentDate))+1;
+  let year = getYear(pointDate);
+  let month = (getMonth(pointDate))+1;
 
   function moveToTextInputScreen(){
     navigation.navigate('TextInputScreen');
@@ -123,9 +125,10 @@ function MainScreen({route, navigation}) {
                 <ArrowUpIcon width={36} height={36}/>
               </TouchableOpacity>
             </View>
-            <Calendar 
-              currentDate={currentDate} 
-              setCurrentDate={setCurrentDate}/>
+            <Calendar
+              pointDate={pointDate}
+              setPointDate={setPointDate}
+            />
           </View>
         ) : (
         //캘린더가 접혀져 있는 경우
@@ -141,8 +144,9 @@ function MainScreen({route, navigation}) {
 
             {/* 접힌 한 주치 Calendar가 나올 구역임 */}
             <CalendarFolded
-              currentDate={currentDate}
-              setCurrentDate={setCurrentDate}/>
+              pointDate={pointDate}
+              setPointDate={setPointDate}
+            />
 
             {/* 스크롤 뷰 안에는 아침,점심,저녁 식단 입력을 확인할 수 있는 창들이 나올 것임 */}
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -284,7 +288,7 @@ function MainScreen({route, navigation}) {
           <BottomSheet 
             ref={bottomSheetRef} 
             index={0} //초기 index를 명확히 설정
-            snapPoints={['8%', '24%']}
+            snapPoints={['8%', '20%']}
             enablePanDownToClose={false}
             style={{ display: isDetailModalOpen ? 'none' : 'flex'}}> 
             <View style={styles.bottomSheetContent}>

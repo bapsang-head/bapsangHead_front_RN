@@ -11,7 +11,12 @@ import axios, {isCancel, AxiosError} from 'axios';
 
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
-import { RootState, AppDispatch, setHeight, setWeight, setAge, setGender, setActivityLevel } from "../store";
+import { RootState, AppDispatch } from '../store'
+import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
+
+//내부 encrypted-storage와 async-storage에 접근하기 위해 import
+import EncryptedStorage from 'react-native-encrypted-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 //SVG 파일들 Import
 import HeightIcon from '../assets/svg/height.svg';
@@ -224,7 +229,6 @@ function SettingScreen_Page3() {
 
     //accountInfo를 업데이트하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
-
     
     
     return (
@@ -253,7 +257,7 @@ function SettingScreen_Page3() {
                 ) : (
                     <TouchableOpacity onPress={()=>{
                         setSelectedActivityLevel('light');
-                        dispatch(setActivityLevel('LOW(평소 활동량이 적습니다.)'));
+                        dispatch(setActivityLevel('LOW'));
                         }}>
                         <View style={styles.activityLevelButton}>
                             <NoExerciseIcon width={40} height={40} fillOpacity={0.3}/>
@@ -279,7 +283,7 @@ function SettingScreen_Page3() {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('lightActive'); dispatch(setActivityLevel('LIGHT(평소 가볍게 운동합니다.)'));}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('lightActive'); dispatch(setActivityLevel('LIGHT'));}}>
                         <View style={styles.activityLevelButton}>
                             <LittleExerciseIcon width={40} height={40} fillOpacity={0.3}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 0.3}}>
@@ -304,7 +308,7 @@ function SettingScreen_Page3() {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('active'); dispatch(setActivityLevel('MEDIUM(활동적인 편입니다.)'));}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('active'); dispatch(setActivityLevel('MEDIUM'));}}>
                         <View style={styles.activityLevelButton}>
                             <ExerciseIcon width={40} height={40} fillOpacity={0.3}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 0.3}}>
@@ -329,7 +333,7 @@ function SettingScreen_Page3() {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('veryActive'); dispatch(setActivityLevel('HIGH(운동 없으면 못삽니다.)'));}}>
+                    <TouchableOpacity style={{marginTop: 24}} onPress={()=>{setSelectedActivityLevel('veryActive'); dispatch(setActivityLevel('HIGH'));}}>
                         <View style={styles.activityLevelButton}>
                             <MuchExerciseIcon width={40} height={40} fillOpacity={0.3}/>
                             <View style={{justifyContent: 'center', marginLeft: 28, opacity: 0.3}}>
@@ -359,6 +363,11 @@ function SettingScreen({Stack, navigation}) {
     //받은 정보를 바탕으로 서버에 데이터를 전송하는 function (axios 사용 예정)
     async function registerAccount() {
 
+        // Authorization: Bearer {{accessToken}}
+        // accessToken
+
+        const beforeRegisterAccessToken = await AsyncStorage.getItem('accessToken') //내부 저장소의 accessToken을 우선 가져온다
+        console.log(beforeRegisterAccessToken);
         const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/auth/register`; //post 요청에 사용할 url 설정
 
         //request body에 포함될 데이터 정의
@@ -375,14 +384,17 @@ function SettingScreen({Stack, navigation}) {
         //"Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
         //axios를 이용한 post 요청에 관하여 시도하는 try-catch 구문
         try {
+
             const response = await axios.post(url, data, {
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
+                    'Authorization': `Bearer ${beforeRegisterAccessToken}`, //Authorization 헤더 추가
                 },
             })
             
             //응답 데이터에서에서 "isRegistered", "name" 속성을 추출하여 로그에 출력
             console.log('userID가 뭐임? => ', response.data.userId);
+            console.log('새로 받아온 accessToken이 뭐임? => ', response.data.accessToken)
             console.log('refreshToken이 뭐임? => ', response.data.refreshToken);
 
         } catch (error) {

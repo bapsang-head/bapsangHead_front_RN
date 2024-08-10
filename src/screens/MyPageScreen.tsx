@@ -9,6 +9,8 @@ import { styles } from '../styles/styles';
 
 import * as KakaoLogins from "@react-native-seoul/kakao-login";
 
+import EncryptedStorage from 'react-native-encrypted-storage'
+
 import FixBasicInfoIcon from '../assets/svg/build.svg';
 
 import NoExerciseIcon from '../assets/svg/airline_seat_individual_suite.svg';
@@ -19,7 +21,8 @@ import LogoutIcon from '../assets/svg/logout.svg';
 
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
-import { RootState, AppDispatch, setHeight, setWeight, setAge, setGender, setActivityLevel } from "../store";
+import { RootState, AppDispatch } from '../store'
+import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
 
 
 function MyPageScreen({route, navigation}) {
@@ -67,6 +70,7 @@ function MyPageScreen({route, navigation}) {
             if (logOutString != null) {
                 setIsLogOut(true); //로그인 여부를 true로 변경
                 console.log(logOutString); //받아온 정보 log에 찍어보기
+                await EncryptedStorage.removeItem('refreshToken'); //refreshToken 삭제
                 initializeAccountInfo(); //회원 정보 초기화
                 moveToLoginScreen(); //로그인 창으로 다시 이동한다
             } else {

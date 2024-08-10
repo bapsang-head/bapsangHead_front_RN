@@ -4,7 +4,8 @@ import * as Progress from 'react-native-progress';
 import {styles} from '../styles/styles'
 
 import { useSelector, useDispatch } from "react-redux"
-import { RootState, setMarkedDate, AppDispatch } from "../store";
+import { RootState, AppDispatch } from "../store";
+import { setMarkedDate } from '../slices/markedDateSlice'
 
 import { 
     format,
@@ -22,10 +23,10 @@ const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
 
 //한 주 달력에 들어갈 내용((날짜(Date))들의 배열을 만든다.
-function makeWeekCalendarDays(currentDate: Date) {
+function makeWeekCalendarDays(pointDate: Date) {
 
-    const weekStartDate = startOfWeek(currentDate); //markedDate가 포함되어 있는 주의 시작 날짜
-    const weekEndDate = endOfWeek(currentDate); //markedDate가 포함되어 있는 주의 끝 날짜
+    const weekStartDate = startOfWeek(pointDate); //markedDate가 포함되어 있는 주의 시작 날짜
+    const weekEndDate = endOfWeek(pointDate); //markedDate가 포함되어 있는 주의 끝 날짜
 
     let weekCalendarDays = [];
     let start = weekStartDate;
@@ -39,9 +40,13 @@ function makeWeekCalendarDays(currentDate: Date) {
 }
 
 //한 주치 Calendar를 렌더링 해주는 함수
-function renderWeekCalendar(currentDate: Date, setCurrentDate: Function, markedDate: string | null, updateMarkedDate: Function) {
+function renderWeekCalendar(pointDate: Date, 
+    setPointDate: Function, 
+    markedDate: string | null, 
+    updateMarkedDate: Function
+    ) {
 
-    let weekCalendarDays = makeWeekCalendarDays(currentDate);
+    let weekCalendarDays = makeWeekCalendarDays(pointDate);
 
     //받아온 한 주치 날짜를 바탕으로 주 캘린더를 찍어낸다
     return (
@@ -49,13 +54,9 @@ function renderWeekCalendar(currentDate: Date, setCurrentDate: Function, markedD
             {
                 weekCalendarDays.map((day, index) => {
                     let style;
-                    //해당 달이 아닌 경우엔 회색으로 표시해야 한다
-                    if(getMonth(day) !== getMonth(currentDate))
-                    {
-                        style={color: "gray"};
-                    } else {
-                        style={color: "black"};
-                    }
+
+                    //해당 경우엔 모든 날짜를 검은 색으로 표시
+                    style={color: "black"};
 
                     //결과적으로 화면에 뿌려줄 것이다
                     return (
@@ -63,7 +64,7 @@ function renderWeekCalendar(currentDate: Date, setCurrentDate: Function, markedD
                         <TouchableOpacity
                             onPress={() => {
                                 updateMarkedDate(day.toISOString());
-                                setCurrentDate(day); //달력이 넘어가도록 해야 하므로, currentDate도 바꾼다
+                                setPointDate(day);
                             }}
                             key={index}
                             style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
@@ -90,25 +91,33 @@ function renderWeekCalendar(currentDate: Date, setCurrentDate: Function, markedD
 function CalendarFolded(props: any) {   
 
     let weekMarking = ["일", "월", "화", "수", "목", "금", "토"]; //요일을 표시하기 위한 데이터
+
     const flatListRef = useRef(null);
     const scrollEnabledRef = useRef(true); //scroll 이벤트의 빈번한 발생을 방지하기 위해 스크롤 가능 여부 제어 (불필요한 재렌더링 방지를 위해 state가 아닌 Ref 사용)
 
+    const MAX_COUNT_OF_WEEKS = 1000; // 매우 많은 주들을 미리 준비
+    const INITIAL_INDEX = Math.floor(MAX_COUNT_OF_WEEKS / 2); // 중간에 위치한 현재 주 인덱스
+
     //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
-    console.log(markedDate)
 
-    //초기에 해당 컴포넌트가 Mount될 때에만 markedDate를 currentDate로 설정
-    useEffect(() => {
-        if (markedDate) {
-            props.setCurrentDate(new Date(markedDate));
-        }
-    }, []);
+    console.log(props.pointDate);
 
     //markedDate를 업데이트하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
     const updateMarkedDate = (date: string) => {
         dispatch(setMarkedDate(date));
     }
+
+    //weekData를 useRef로 초기화하여 고정 값으로 설정
+    const weekDataRef = useRef(
+        Array.from({ length: MAX_COUNT_OF_WEEKS }, (_, i) => {
+            const diff = i - INITIAL_INDEX;
+            return { key: `week-${i}`, date: addWeeks(markedDate, diff) };
+        })
+    );
+
+    const prevOffsetX = useRef(0); //스크롤 방향 감지를 위한 Ref 선언 (이전 스크롤 위치를 저장할 것임)
 
     //좌우로 Scroll 하는 것에 관한 함수 (useCallback으로 Memoization한다.)
     const handleScroll = useCallback((event) => {
@@ -120,41 +129,26 @@ function CalendarFolded(props: any) {
 
         const offsetX = event.nativeEvent.contentOffset.x;
 
-        //Math.round로 계산하여 스크롤 위치에 따라 더 정확한 페이지 index를 얻도록 한다
-        const pageIndex = Math.round(offsetX / contentWidth);
+        console.log("Scroll Event Triggered"); // 스크롤 이벤트가 트리거되었는지 확인
 
-        //pageIndex===0, 그리고 pageIndex===2 조건을 사용하여 첫 번째 페이지 이전과 세번째 페이지 이후를 감지한다
-        //setCurrentDate() 함수를 호출할 때, 이전 상태를 참조하여 연속 스크롤에도 올바르게 날짜를 설정한다
-        if(pageIndex === 0) {
+        //왼쪽으로 스크롤했을 경우
+        if(offsetX < prevOffsetX.current) {
+            scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
+            props.setPointDate((prevDate)=>{ return subWeeks(prevDate, 1)});
+            scrollEnabledRef.current = true;
+            
+        //오른쪽으로 스크롤했을 경우
+        } else if(offsetX > prevOffsetX.current) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다
-            props.setCurrentDate(prevDate => {
-                const newDate = subWeeks(prevDate, 1);
-                setTimeout(() => {scrollEnabledRef.current = true;}, 300); //스크롤 재활성화 시간 조정(300ms)
-                return newDate;
-            });
-        } else if(pageIndex === 2) {
-            scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다
-            props.setCurrentDate(prevDate => {
-                const newDate = addWeeks(prevDate, 1);
-                setTimeout(() => {scrollEnabledRef.current = true;}, 300); //스크롤 재활성화 시간 조정(300ms)
-                return newDate;
-            });
+            props.setPointDate((prevDate)=>{ return addWeeks(prevDate, 1)});
+            scrollEnabledRef.current = true;
+        } else {
+            console.log("스크롤 이벤트 발생하지 않음");
         }
-    },[props.setCurrentDate]);
 
-    //넘긴 달력을 항상 current 상태(index: 1)로 맞춰준다. 이는, currentDate가 변할 때마다 실행한다
-    useEffect(()=> {
-        if(flatListRef.current) {
-            flatListRef.current.scrollToIndex({index:1, animated: false});
-        }
-    }, [props.currentDate]);
+        prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교
 
-    //이전, 현재, 다음 주의 데이터를 준비하여 'FlatList'의 data로 사용할 것이다.
-    const weekData = [
-        {key: 'prev', date: subWeeks(props.currentDate, 1)},
-        {key: 'current', date: props.currentDate},
-        {key: 'next', date: addWeeks(props.currentDate, 1)},
-    ]
+    },[props.setPointDate]);
 
     //calendarContainer의 높이 값은 고정값을 가져야 할 것 같다.
     return (
@@ -183,21 +177,26 @@ function CalendarFolded(props: any) {
                 <FlatList
                     style={{marginTop: 8}}
                     ref={flatListRef}
-                    data={weekData}
-                    renderItem={({item}) => renderWeekCalendar(item.date, props.setCurrentDate, markedDate, updateMarkedDate)}
+                    data={weekDataRef.current}
+                    renderItem={({item}) => renderWeekCalendar(item.date, props.setPointDate, markedDate, updateMarkedDate)}
                     keyExtractor={(item) => item.key} 
                     horizontal
                     pagingEnabled
                     showsHorizontalScrollIndicator={false}
                     onMomentumScrollEnd={handleScroll} //스크롤이 끝날 때의 이벤트를 처리한다
-                    initialScrollIndex={1} //해당 값을 1로 넘겨 주어서 초기에는 현재 달이 가운데에 오도록 처리
+                    initialScrollIndex={INITIAL_INDEX} //해당 값을 INITIAL_INDEX로 넘겨 주어서 초기에는 현재 주가 가운데에 오도록 처리
                     getItemLayout={(data, index) => (
                         { length: contentWidth, offset: contentWidth * index, index}
                     )}
+
+                    //렌더링 성능 최적화를 위한 props (initialNumToRender, maxToRenderPerBatch, windowSize)
+                    initialNumToRender={5}
+                    maxToRenderPerBatch={5}
+                    windowSize={5} // 현재 화면 크기의 5배에 해당하는 항목을 렌더링
                     />
             </View>
         </View>
     )
 }
 
-export default CalendarFolded
+export default CalendarFolded;

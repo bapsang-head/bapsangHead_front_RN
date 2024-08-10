@@ -10,7 +10,11 @@ import axios, {isCancel, AxiosError} from 'axios';
 
 import * as KakaoLogins from "@react-native-seoul/kakao-login";
 
+//내부 encrypted-storage와 async-storage에 접근하기 위해 import
+import EncryptedStorage from 'react-native-encrypted-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
+//로그인 화면!
 function LoginScreen({route, navigation})
 {
     let [isLogin, setIsLogin] = useState(false); //카카오 계정 로그인 여부를 관리하는 state
@@ -53,7 +57,7 @@ function LoginScreen({route, navigation})
                     tokenType: 'Bearer',
                     accessToken: kakaoLoginResponse.accessToken
                 };
-
+                
                 console.log(data);
 
                 //axios를 이용한 post 요청에 관하여 시도하는 try-catch 구문
@@ -68,6 +72,19 @@ function LoginScreen({route, navigation})
                     console.log('가입됨? => ', response.data.isRegistered);
                     console.log('이름이 뭐임? => ', response.data.name);
                     console.log('액세스 토큰은? =>', response.data.accessToken);
+                    console.log('리프레시 토큰은? => ', response.data.refreshToken);
+
+                    //내부 저장소에 accessToken 저장
+                    await AsyncStorage.setItem(
+                        'accessToken',
+                        response.data.accessToken
+                    )
+
+                    //내부 '보안' 저장소에 refreshToken 저장
+                    await EncryptedStorage.setItem(
+                        'refreshToken',
+                        response.data.refreshToken
+                    )
 
                     //가입 여부에 따라 가는 곳이 나뉘어져야 한다 
                     if(response.data.isRegistered)

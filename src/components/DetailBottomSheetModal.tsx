@@ -6,7 +6,6 @@ import * as Progress from 'react-native-progress';
 //'세부 영양성분' 내부에 들어가는 DetailBottomSheetModal 컴포넌트
 function DetailBottomSheetModal(props) {
   console.log("DetailBottomSheetModal rendering");
-  const [parentWidth, setParentWidth] = useState(0); //부모 컴포넌트의 너비를 받아오기 위한 State
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.modalContainer}>
@@ -89,7 +88,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fffbd4',
         padding: 16,
         marginTop: 8,
-        borderRadius: 12
+        borderRadius: 12,
+        marginBottom: 12,
     }
   });
 
