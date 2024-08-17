@@ -47,6 +47,14 @@ function MainScreen({route, navigation}) {
   let [isCalendarFolded, setIsCalendarFolded] = useState(false); //Calendar의 visibility를 관리한다
   let [isSectionFolded, setIsSectionFolded] = useState([true, true, true]); //아침,점심,저녁 식사를 표시한 section을 접었다 폈다 하는 state
 
+  //redux에 저장되어 있는 markedDate 정보를 가져온다
+  let markedDate = useSelector((state: RootState) => state.markedDate.date);
+
+  //markedDate를 업데이트 하기 위한 코드
+  const dispatch: AppDispatch = useDispatch();
+  const updateMarkedDate = (date: string) => {
+    dispatch(setMarkedDate(date));
+  }
 
   //section을 접고, 피고, 할 수 있도록 하는 함수
   //배열로 된 state는 상태를 변경할 때, 아래와 같은 형태를 따라야 한다
@@ -66,6 +74,12 @@ function MainScreen({route, navigation}) {
 
   //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다
   let toggleCalendar = useCallback(() => {
+    
+    if(isCalendarFolded)
+    {
+      console.log('Yeah');
+      setPointDate(new Date(markedDate));
+    }
     setIsCalendarFolded(!isCalendarFolded);
   }, [isCalendarFolded]);
 

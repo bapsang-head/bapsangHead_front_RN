@@ -2,6 +2,7 @@ import React, {useState, useMemo} from 'react';
 import {View, Text, Button, StyleSheet, Dimensions} from 'react-native';
 import * as Progress from 'react-native-progress';
 
+//barWidth를 state로 관리하게 되면, 불필요하게 재렌더링이 여러 번 발생, 아래와 같이 관리하는 것이 효율적일 것으로 판단.
 const barWidth = Dimensions.get("screen").width;
 const modifiedBarWidth = barWidth - 80;
 

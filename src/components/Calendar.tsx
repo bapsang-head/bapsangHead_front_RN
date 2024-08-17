@@ -77,6 +77,7 @@ function renderCalendar(pointDate: Date,
 
         if (!isPrevMonth && !isNextMonth) {
             // 현재 월의 날짜를 터치한 경우
+            setPointDate(day);
             updateMarkedDate(day.toISOString());
 
         } else {
@@ -155,12 +156,15 @@ function Calendar(props: any) {
 
     const flatListRef = useRef(null);
     const scrollEnabledRef = useRef(true); //scroll 이벤트의 빈번한 발생을 방지하기 위해 스크롤 가능 여부 제어 (불필요한 재렌더링 방지를 위해 state가 아닌 Ref 사용)
+    const prevOffsetX = useRef(null); //스크롤 방향 감지를 위한 Ref 선언 (이전 스크롤 위치를 저장할 것임)
 
     const MAX_COUNT_OF_MONTHS = 1000; // 매우 많은 달을 미리 준비
     const INITIAL_INDEX = Math.floor(MAX_COUNT_OF_MONTHS / 2); // 중간에 위치한 현재 월 인덱스
 
     //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
+
+    console.log(props.pointDate);
 
     //markedDate를 업데이트하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
@@ -172,39 +176,42 @@ function Calendar(props: any) {
     const monthDataRef = useRef(
         Array.from({ length: MAX_COUNT_OF_MONTHS }, (_, i) => {
             const diff = i - INITIAL_INDEX;
-            return { key: `month-${i}`, date: addMonths(markedDate, diff) };
+            return { key: `month-${i}`, date: addMonths(props.pointDate, diff) };
         })
     );
     
 
-    const prevOffsetX = useRef(0); //스크롤 방향 감지를 위한 Ref 선언 (이전 스크롤 위치를 저장할 것임)
+    useEffect(() => {
+        //initialScrollIndex에 맞는 초기 offsetX를 설정
+        //initialScrollIndex를 사용하여 FlatList가 중간 인덱스에서 시작하도록 했으므로,
+        //'onLayout' 이벤트 대신 'FlatList'가 처음 렌더링될 때 초기 'offsetX' 값을 정확히 설정해야 한다.
+        prevOffsetX.current = contentWidth * INITIAL_INDEX;
+    }, []); //빈 배열을 dependency로 전달하여 한 번만 실행
 
-    //로그 확인용 코드
-    // useEffect(() => {
-    //     console.log('markedDate: ', markedDate);
-    //     console.log('point: ', props.pointDate);
-    // }, [markedDate, props.pointDate]);
 
     //좌우로 Scroll 하는 것에 관한 함수 (useCallback으로 Memoization한다.)
     const handleScroll = useCallback((event) => {
+
+        const offsetX = event.nativeEvent.contentOffset.x; 
+
+        console.log("Scroll Event Triggered", prevOffsetX.current); // 스크롤 이벤트가 트리거되었는지 확인
+        console.log("Scroll Event Triggered", offsetX); // 스크롤 이벤트가 트리거되었는지 확인
 
         if(!scrollEnabledRef.current) //scrollEnabledRef가 false인 경우, handleScroll 이벤트를 중단시킨다
         {
             return;
         }
 
-        const offsetX = event.nativeEvent.contentOffset.x; 
-
-        console.log("Scroll Event Triggered"); // 스크롤 이벤트가 트리거되었는지 확인
+        const movementThreshold = contentWidth / 2; //이동이 실제로 발생했는지 판단하기 위한 Threshold
 
         //왼쪽으로 스크롤했을 경우
-        if(offsetX < prevOffsetX.current) {
+        if(offsetX < prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
             props.setPointDate((prevDate)=>{ return subMonths(prevDate, 1)});
             scrollEnabledRef.current = true;
             
         //오른쪽으로 스크롤했을 경우
-        } else if(offsetX > prevOffsetX.current) {
+        } else if(offsetX > prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
             props.setPointDate((prevDate)=>{ return addMonths(prevDate, 1)});
             scrollEnabledRef.current = true;
@@ -215,6 +222,7 @@ function Calendar(props: any) {
         prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교
 
     },[props.setPointDate]);
+
 
     return (
         <View style={styles.calendarContainer}>

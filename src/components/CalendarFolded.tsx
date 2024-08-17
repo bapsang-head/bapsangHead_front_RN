@@ -43,8 +43,8 @@ function makeWeekCalendarDays(pointDate: Date) {
 function renderWeekCalendar(pointDate: Date, 
     setPointDate: Function, 
     markedDate: string | null, 
-    updateMarkedDate: Function
-    ) {
+    updateMarkedDate: Function) 
+    {
 
     let weekCalendarDays = makeWeekCalendarDays(pointDate);
 
@@ -94,9 +94,10 @@ function CalendarFolded(props: any) {
 
     const flatListRef = useRef(null);
     const scrollEnabledRef = useRef(true); //scroll 이벤트의 빈번한 발생을 방지하기 위해 스크롤 가능 여부 제어 (불필요한 재렌더링 방지를 위해 state가 아닌 Ref 사용)
+    const prevOffsetX = useRef(null); //스크롤 방향 감지를 위한 Ref 선언 (이전 스크롤 위치를 저장할 것임)
 
     const MAX_COUNT_OF_WEEKS = 1000; // 매우 많은 주들을 미리 준비
-    const INITIAL_INDEX = Math.floor(MAX_COUNT_OF_WEEKS / 2); // 중간에 위치한 현재 주 인덱스
+    const INITIAL_INDEX = Math.floor(MAX_COUNT_OF_WEEKS / 2); // 중간에 위치한 현재 주차 인덱스
 
     //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
@@ -117,28 +118,39 @@ function CalendarFolded(props: any) {
         })
     );
 
-    const prevOffsetX = useRef(0); //스크롤 방향 감지를 위한 Ref 선언 (이전 스크롤 위치를 저장할 것임)
+    useEffect(() => {
+        //initialScrollIndex에 맞는 초기 offsetX를 설정
+        //initialScrollIndex를 사용하여 FlatList가 중간 인덱스에서 시작하도록 했으므로,
+        //'onLayout' 이벤트 대신 'FlatList'가 처음 렌더링될 때 초기 'offsetX' 값을 정확히 설정해야 한다.
+        prevOffsetX.current = contentWidth * INITIAL_INDEX;
+
+        //calendar가 펼쳐진 상태에서 접힌 상태로 바뀌게 되면, marked된 달력을 기준으로 띄워야 하므로, pointDate도 바꿔야 함
+        // props.setPointDate(new Date(markedDate));
+    }, []); //빈 배열을 dependency로 전달하여 한 번만 실행
 
     //좌우로 Scroll 하는 것에 관한 함수 (useCallback으로 Memoization한다.)
     const handleScroll = useCallback((event) => {
+
+        const offsetX = event.nativeEvent.contentOffset.x;
+
+        console.log("Scroll Event Triggered(prevOffsetX)", prevOffsetX.current); // 스크롤 이벤트가 트리거되었는지 확인
+        console.log("Scroll Event Triggered(offsetX)", offsetX); // 스크롤 이벤트가 트리거되었는지 확인
 
         if(!scrollEnabledRef.current) //scrollEnabledRef가 false인 경우, handleScroll 이벤트를 중단시킨다
         {
             return;
         }
 
-        const offsetX = event.nativeEvent.contentOffset.x;
-
-        console.log("Scroll Event Triggered"); // 스크롤 이벤트가 트리거되었는지 확인
+        const movementThreshold = contentWidth / 2; //이동이 실제로 발생했는지 판단하기 위한 Threshold
 
         //왼쪽으로 스크롤했을 경우
-        if(offsetX < prevOffsetX.current) {
+        if(offsetX < prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
             props.setPointDate((prevDate)=>{ return subWeeks(prevDate, 1)});
             scrollEnabledRef.current = true;
             
         //오른쪽으로 스크롤했을 경우
-        } else if(offsetX > prevOffsetX.current) {
+        } else if(offsetX > prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다
             props.setPointDate((prevDate)=>{ return addWeeks(prevDate, 1)});
             scrollEnabledRef.current = true;
@@ -149,6 +161,7 @@ function CalendarFolded(props: any) {
         prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교
 
     },[props.setPointDate]);
+
 
     //calendarContainer의 높이 값은 고정값을 가져야 할 것 같다.
     return (
