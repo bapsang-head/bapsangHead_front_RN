@@ -10,7 +10,7 @@ import RemoveIcon from '../assets/svg/remove.svg'
 //1차 분석 후 나오는 UI
 function FixingInput(props) {
 
-    let [data, setData] = useState([['삼치간장조림', '100', 'g'], ['엄마는외계인', '2', '숟가락'], ['동원고추참치', '2', '캔']]);
+    let [data, setData] = useState([['삼치간장조림', '100', 'g'], ['엄마는외계인', '2', '스푼'], ['동원고추참치', '2', '캔']]);
 
     //사용자가 data를 수정 시 업데이트하기 위한 updateDataElement 함수
     const updateDataElement = (index, index_2, value) => {
