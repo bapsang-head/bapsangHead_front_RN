@@ -7,6 +7,14 @@ import { styles } from '../styles/styles';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 
+//redux-toolkit을 사용하기 위한 import
+import { useSelector, useDispatch } from "react-redux"
+import { RootState, AppDispatch } from '../store'
+import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
+
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import axios from 'axios';
+
 //SVG 파일들 Import
 import HeightIcon from '../assets/svg/height.svg';
 import WeightIcon from '../assets/svg/scale.svg';
@@ -17,16 +25,84 @@ import WomanIcon from '../assets/svg/woman_2.svg';
 
 function FixBasicDataScreen({route, navigation, appState}) {
 
-    let [height, setHeight] = useState(''); //키
-    let [weight, setWeight] = useState(''); //몸무게
-    let [age, setAge] = useState(''); //나이
-    let [gender, setGender] = useState(''); //성별
+    let [manPressed, setManPressed] = useState(false); //남자 버튼이 눌렸을 때
+    let [womanPressed, setWomanPressed] = useState(false); //여자 버튼이 눌렸을 때
+
+    //실험용 코드 (redux-toolkit으로 accountInfo를 전역적으로 관리하고 있음)
+    let accountInfo = useSelector((state: RootState) => state.accountInfo);
+
+    console.log(accountInfo);
+
+    //아래 3개의 값만 필요할 듯 (gender는 버튼 선택으로 정해지니까..)
+    let height = accountInfo.height;
+    let weight = accountInfo.weight;
+    let age = accountInfo.age;
+
+    //accountInfo를 업데이트하기 위한 코드
+    const dispatch: AppDispatch = useDispatch();
+    
+    //height 입력값을 handling
+    const handleHeightChange = (text: string) => {
+        const heightValue = text ? parseInt(text, 10) : null;
+        dispatch(setHeight(heightValue))
+    };
+
+    //weight 입력값을 handling
+    const handleWeightChange = (text: string) => {
+        const weightValue = text ? parseInt(text, 10) : null;
+        dispatch(setWeight(weightValue));
+    };
+
+    //age 입력값을 handling
+    const handleAgeChange = (text: string) => {
+        const ageValue = text ? parseInt(text, 10) : null;
+        dispatch(setAge(ageValue));
+    };
 
     const nav = useNavigation(); //네비게이션 사용을 위해 useNavigation() 가져오기
 
     //'완료' 버튼을 눌렀을 때의 동작 수행
     const handleDonePress = () => {
-        alert('Done pressed!');
+        updateUserBasicInfo();
+        alert('유저 기본 정보 수정이 완료되었습니다.');
+    }
+
+    async function updateUserBasicInfo() {
+        const accessToken = await AsyncStorage.getItem('accessToken') //내부 저장소의 accessToken을 우선 가져온다
+
+
+        //변경하고자 하는 데이터를 객체 형태로 정의한다
+        const updatedData = {
+            height: accountInfo.height,
+            weight: accountInfo.weight,
+            age: accountInfo.age,
+            gender: accountInfo.gender,
+        };
+        
+        console.log('accessToken: ', accessToken);
+        console.log(updatedData);
+
+        try {
+            //PATCH 요청을 보낸다
+            const response = await axios.patch(
+                'http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile',
+                updatedData, //변경할 데이터를 요청에 포함한다
+                {
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
+                    }
+                }
+            );
+
+            //성공적으로 요청이 완료되었을 경우의 처리
+            console.log('성공적으로 기본 정보 수정 완료되었습니다: ', response.data);
+            nav.goBack();
+        } catch (error) {
+            //요청 실패 시의 에러 처리
+            console.error('기본 정보 수정에 실패했습니다: ', error);
+            nav.goBack();
+        }
     }
 
     //useLayoutEffect()를 통해서 header 설정을 TextInputScreen 내부에서 수행한다
@@ -67,8 +143,8 @@ function FixBasicDataScreen({route, navigation, appState}) {
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16}}>
                     <TextInput
                         style={[styles.settingInputButton, {flex: 1}]}
-                        onChangeText={setHeight}
-                        value={height}
+                        onChangeText={handleHeightChange}
+                        value={height !== null ? height.toString() : ''}
                         placeholder="178"
                         placeholderTextColor={'#a8a8a8'}/>
                     <Text style={{fontSize: 24, fontWeight: 'bold', marginLeft: 8}}>cm</Text>
@@ -82,8 +158,8 @@ function FixBasicDataScreen({route, navigation, appState}) {
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16}}>
                     <TextInput
                         style={[styles.settingInputButton, {flex: 1}]}
-                        onChangeText={setWeight}
-                        value={weight}
+                        onChangeText={handleWeightChange}
+                        value={weight !== null ? weight.toString() : ''}
                         placeholder="72"
                         placeholderTextColor={'#a8a8a8'}/>
                     <Text style={{fontSize: 24, fontWeight: 'bold', marginLeft: 8}}>kg</Text>
@@ -98,8 +174,8 @@ function FixBasicDataScreen({route, navigation, appState}) {
                 <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16}}>
                     <TextInput
                         style={[styles.settingInputButton, {flex: 1}]}
-                        onChangeText={setAge}
-                        value={age}
+                        onChangeText={handleAgeChange}
+                        value={age !== null ? age.toString() : ''}
                         placeholder="25"
                         placeholderTextColor={'#a8a8a8'}/>
                     <Text style={{fontSize: 24, fontWeight: 'bold', marginLeft: 8}}>세</Text>
@@ -116,49 +192,67 @@ function FixBasicDataScreen({route, navigation, appState}) {
                     justifyContent: 'space-between'}}>
 
                     {/* '남성' 버튼을 누를 경우엔 여성 버튼은 선택 해제시켜야 한다. 그 반대도 마찬가지. */}
-                    {
-                        gender === '남' ? (
-                            <TouchableOpacity 
-                                onPress={()=>{ setGender('') }}  
-                                style={{flex: 3}}>
+                    <TouchableOpacity 
+                        onPress={()=>{
+                            //이미 버튼이 눌려있는 경우, 눌려있지 않은 경우에 대해서 이벤트를 달리 처리한다.
+                            if(manPressed)
+                            {
+                                setManPressed(false);
+                                dispatch((setGender(null))); //gender 선택 null
+                            } else {
+                                setWomanPressed(false);
+                                setManPressed(true);
+                                dispatch((setGender('MALE'))); //gender 선택 null
+                            }
+                        }}  
+                        style={{flex: 3}}>
+                        {
+                            //눌렸을 때와 안눌렸을 때의 스타일 차이가 있다.
+                            manPressed ? (
                                 <View style={[styles.genderSelectButton, {backgroundColor: '#FFE7D1', borderColor: '#FFE7D1'}]}>
                                     <ManIcon width={24} height={24} opacity={1} fill='#FFA858'/>
                                     <Text style={{fontSize: 16, opacity: 1}}>남성</Text>
                                 </View>
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity 
-                                onPress={()=>{ setGender('남') }}  
-                                style={{flex: 3}}>
+                            ) : (
                                 <View style={[styles.genderSelectButton]}>
                                     <ManIcon width={24} height={24} opacity={0.3} fill='black'/>
                                     <Text style={{fontSize: 16, opacity: 0.3}}>남성</Text>
                                 </View>
-                            </TouchableOpacity>
-                        )
-                    }
+                            )
+                        }
+                        
+                    </TouchableOpacity>
                     <View style={{flex: 1}}/>{/* 비율 Layout을 위한 빈 View */}
-                    {
-                        gender === '여' ? (
-                            <TouchableOpacity 
-                            onPress={()=>{ setGender('') }} 
-                            style={{flex: 3}}>
+                    <TouchableOpacity 
+                        onPress={()=>{
+                            //이미 버튼이 눌려있는 경우, 눌려있지 않은 경우에 대해서 이벤트를 달리 처리한다.
+                            if(womanPressed)
+                            {
+                                setWomanPressed(false);
+                                dispatch((setGender(null))); //gender 선택 null
+                            } else {
+                                setManPressed(false);
+                                setWomanPressed(true);
+                                dispatch((setGender('FEMALE'))); //gender 선택 null
+                            }
+                        }} 
+                        style={{flex: 3}}>
+                        {
+                            //눌렸을 때와 안 눌렸을 때의 스타일 차이가 있다.
+                            womanPressed ? (
                                 <View style={[styles.genderSelectButton, {backgroundColor: '#FFE5E5', borderColor: '#FFE5E5'}]}>
                                     <WomanIcon width={24} height={24} opacity={1} fill='#FFB6B6'/>
                                     <Text style={{fontSize: 16, opacity: 1}}>여성</Text>
                                 </View>
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity 
-                            onPress={()=>{ setGender('여') }} 
-                            style={{flex: 3}}>
+                            ) : (
                                 <View style={styles.genderSelectButton}>
                                     <WomanIcon width={24} height={24} opacity={0.3} fill='black'/>
                                     <Text style={{fontSize: 16, opacity: 0.3}}>여성</Text>
                                 </View>
-                            </TouchableOpacity>
-                        )
-                    }
+                            )
+                        }
+                        
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>

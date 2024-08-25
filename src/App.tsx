@@ -5,7 +5,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Button, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as SplashScreen from 'expo-splash-screen';
 import moment from 'moment';
 import { styles } from './styles/styles';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,6 +16,7 @@ import store from './store'
 
 
 //components(Screen들이라고 생각하면 됩니다) import
+import SplashScreen from '@screens/SplashScreen';
 import MainScreen from '@screens/MainScreen';
 import TextInputScreen from '@screens/TextInputScreen';
 import DetailScreen from '@screens/DetailScreen';
@@ -27,8 +27,6 @@ import ActivityLevelFixScreen from '@screens/ActivityLevelFixScreen';
 import FixBasicDataScreen from '@screens/FixBasicDataScreen';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
-//SplashScreen을 자동으로 숨기지 않도록 설정
-SplashScreen.preventAutoHideAsync();
 
 // Define the type for the navigation stack
 type RootStackParamList = {
@@ -96,6 +94,7 @@ function StackNavigation() {
   
   return (
     <Stack.Navigator>
+      <Stack.Screen name="SplashScreen" component={SplashScreen} options={{ headerShown: false}} />
       <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }} /> 
       <Stack.Screen name="SettingScreen" component={SettingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TabNavigator" component={TabNavigator} options={{ headerShown: false }} />
@@ -118,24 +117,6 @@ const navTheme = {
 //최상위 App Component
 function App(props: any) {
 
-  useEffect(() => {
-    async function prepare() //prepare 함수를 정의한다
-    {
-      try {
-        //내가 필요한 리소스를 가져오는 동안 splash screen을 보여준다 (여기에 리소스 가져오는 코드를 집어 넣는다)
-        //아래 코드는 인위적으로 2초를 기다리는 코드이다
-        await new Promise(resolve => setTimeout(resolve, 2000)); 
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        //Resource 로드가 완료 되면, SplashScreen을 숨긴다
-        await SplashScreen.hideAsync();
-      }
-    }
-    
-    prepare() //prepare 함수 실행
-  }, []);
-
   {/* SafeAreaView로 감싸서 상단 StatusBar를 고려한다 (아이폰 M자 탈모 대비)*/}
   return (
     <Provider store={store}>
@@ -144,7 +125,7 @@ function App(props: any) {
         <SafeAreaProvider> 
           <SafeAreaView style={styles.container}>
             <NavigationContainer theme={navTheme}>
-              <StackNavigation/> 
+              <StackNavigation/>
             </NavigationContainer>
           </SafeAreaView>
         </SafeAreaProvider>

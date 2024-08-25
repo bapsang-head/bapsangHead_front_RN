@@ -367,7 +367,7 @@ function SettingScreen({Stack, navigation}) {
         // accessToken
 
         const beforeRegisterAccessToken = await AsyncStorage.getItem('accessToken') //내부 저장소의 accessToken을 우선 가져온다
-        console.log(beforeRegisterAccessToken);
+        console.log('이전 accessToken: ', beforeRegisterAccessToken);
         const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/auth/register`; //post 요청에 사용할 url 설정
 
         //request body에 포함될 데이터 정의
@@ -475,7 +475,7 @@ function SettingScreen({Stack, navigation}) {
                         </TouchableOpacity>
                       ),
                     headerRight: () => (
-                      <TouchableOpacity onPress={()=>{registerAccount(); navigation.navigate('TabNavigator')}}>
+                      <TouchableOpacity onPress={()=>{registerAccount(); navigation.replace('TabNavigator')}}>
                         <Text style={{fontSize: 20}}>완료</Text>
                       </TouchableOpacity>
                     ) 

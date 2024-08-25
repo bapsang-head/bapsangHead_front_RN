@@ -23,12 +23,12 @@ function LoginScreen({route, navigation})
 
     //카카오 로그인이 성공적으로 되었는데, 회원가입이 안되어 있는 경우(isRegistered===false)이면, 세팅 화면으로 가야 한다
     function moveToSettingScreen(){
-        navigation.navigate('SettingScreen');
+        navigation.replace('SettingScreen');
     }
 
     //카카오 로그인이 성공적으로 되었는데, 회원가입이 되어 있는 경우(isRegistered===true)이면, 메인으로 바로 가야 한다
     function moveToMainScreen(){
-        navigation.navigate('TabNavigator');
+        navigation.replace('TabNavigator');
     }
 
     //'Cannot update a component ('...') while rendering a different component ('...') 문제를 해결하기 위해서 useEffect를 사용한다
@@ -58,6 +58,7 @@ function LoginScreen({route, navigation})
                     accessToken: kakaoLoginResponse.accessToken
                 };
                 
+                console.log(kakaoLoginResponse);
                 console.log(data);
 
                 //axios를 이용한 post 요청에 관하여 시도하는 try-catch 구문
@@ -71,8 +72,8 @@ function LoginScreen({route, navigation})
                     //응답 데이터에서에서 "isRegistered", "name" 속성을 추출하여 로그에 출력
                     console.log('가입됨? => ', response.data.isRegistered);
                     console.log('이름이 뭐임? => ', response.data.name);
-                    console.log('액세스 토큰은? =>', response.data.accessToken);
-                    console.log('리프레시 토큰은? => ', response.data.refreshToken);
+                    console.log('초기 액세스 토큰은? =>', response.data.accessToken);
+                    console.log('초기 리프레시 토큰은? => ', response.data.refreshToken);
 
                     //내부 저장소에 accessToken 저장
                     await AsyncStorage.setItem(
@@ -87,7 +88,7 @@ function LoginScreen({route, navigation})
                     )
 
                     //가입 여부에 따라 가는 곳이 나뉘어져야 한다 
-                    if(response.data.isRegistered)
+                    if(!response.data.isRegistered)
                     {
                         moveToMainScreen(); //메인 화면으로 간다
                     } else {

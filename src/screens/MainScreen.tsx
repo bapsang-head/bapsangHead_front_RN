@@ -80,6 +80,7 @@ function MainScreen({route, navigation}) {
       console.log('Yeah');
       setPointDate(new Date(markedDate));
     }
+    
     setIsCalendarFolded(!isCalendarFolded);
   }, [isCalendarFolded]);
 

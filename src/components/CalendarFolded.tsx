@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {View, Text, FlatList, ScrollView, Dimensions, TouchableOpacity} from 'react-native';
 import * as Progress from 'react-native-progress';
-import {styles} from '../styles/styles'
+import { styles } from '../styles/styles'
 
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from "../store";

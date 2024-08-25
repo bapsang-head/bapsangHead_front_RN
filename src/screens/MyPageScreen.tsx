@@ -23,12 +23,17 @@ import LogoutIcon from '../assets/svg/logout.svg';
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
 import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 function MyPageScreen({route, navigation}) {
 
     //accountInfo를 초기화하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
+
+    //실험용 코드 (redux-toolkit으로 accountInfo를 전역적으로 관리하고 있음)
+    let accountInfo = useSelector((state: RootState) => state.accountInfo);
+
     function initializeAccountInfo() {
         dispatch(setHeight(null));
         dispatch(setWeight(null));
@@ -49,10 +54,11 @@ function MyPageScreen({route, navigation}) {
 
     //로그인 화면으로 다시 이동하는 Action (로그아웃 시에 사용)
     function moveToLoginScreen() {
-        navigation.navigate('LoginScreen');
+        navigation.replace('LoginScreen');
     }
 
     console.log("MyPage rendering");
+    console.log('활동량: ', accountInfo.activityLevel);
 
     let [isLogOut, setIsLogOut] = useState(false); //로그아웃이 되었는지 확인한다
     let [logOutString, setLogOutString] = useState(null); 
@@ -71,6 +77,7 @@ function MyPageScreen({route, navigation}) {
                 setIsLogOut(true); //로그인 여부를 true로 변경
                 console.log(logOutString); //받아온 정보 log에 찍어보기
                 await EncryptedStorage.removeItem('refreshToken'); //refreshToken 삭제
+                await AsyncStorage.removeItem('accessToken'); //accessToken 삭제
                 initializeAccountInfo(); //회원 정보 초기화
                 moveToLoginScreen(); //로그인 창으로 다시 이동한다
             } else {
@@ -78,6 +85,62 @@ function MyPageScreen({route, navigation}) {
             }
         } catch (error) {
             console.log(error);
+        }
+    }
+
+    function ActivityButton() {
+        //'평소 활동이 적습니다' 버튼을 출력해야 하는 경우
+        if(accountInfo.activityLevel === 'LOW')
+        {
+            return (
+                <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#f2fcde', marginTop: 10}]}>
+                    <NoExerciseIcon width={48} height={48} fillOpacity={1}/>
+                    <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
+                        <Text style={{fontSize: 20, fontWeight: 'bold'}}>평소 활동이 적습니다.</Text>
+                        <Text style={{fontSize: 12, paddingTop: 8}}>(평균 주 0~1회 운동)</Text>
+                    </View>
+                </View>
+            )
+        } else if(accountInfo.activityLevel === 'LIGHT') {
+            return (
+                <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#FFF8D5', marginTop: 10}]}>
+                    <LittleExerciseIcon width={48} height={48} fillOpacity={1}/>
+                    <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
+                        <Text style={{fontSize: 20, fontWeight: 'bold'}}>평소 가볍게 운동합니다.</Text>
+                        <Text style={{fontSize: 12, paddingTop: 8}}>(평균 주 2~3회 운동)</Text>
+                    </View>
+                </View>
+            )
+        } else if(accountInfo.activityLevel === 'MEDIUM') {
+            return (
+                <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#FFC3A1', marginTop: 10}]}>
+                    <ExerciseIcon width={48} height={48} fillOpacity={1}/>
+                    <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
+                        <Text style={{fontSize: 20, fontWeight: 'bold'}}>활동적인 편입니다.</Text>
+                        <Text style={{fontSize: 12, paddingTop: 8}}>(평균 주 4~5회 운동)</Text>
+                    </View>
+                </View>
+            )
+        } else if(accountInfo.activityLevel === 'HIGH') {
+            return (
+                <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#FFCED7', marginTop: 10}]}>
+                    <MuchExerciseIcon width={48} height={48} fillOpacity={1}/>
+                    <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
+                        <Text style={{fontSize: 20, fontWeight: 'bold'}}>운동 없으면 못삽니다.</Text>
+                        <Text style={{fontSize: 12, paddingTop: 8}}>(평균 주 6~7회 운동)</Text>
+                    </View>
+                </View>
+            )
+        } else {
+            return (
+                <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#FFCED7', marginTop: 10}]}>
+                    <NoExerciseIcon width={48} height={48} fillOpacity={1}/>
+                    <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
+                        <Text style={{fontSize: 20, fontWeight: 'bold'}}>살려주세요</Text>
+                        <Text style={{fontSize: 12, paddingTop: 8}}>(코딩 그만하고 싶어요 ㅜㅜ)</Text>
+                    </View>
+                </View>
+            )
         }
     }
 
@@ -109,28 +172,34 @@ function MyPageScreen({route, navigation}) {
                     <View style={{flexDirection: 'row', alignContent: 'center', justifyContent: 'space-between', marginTop: 20}}>
                         <Text>키</Text>
                         <View style={{flexDirection: 'row', alignContent: 'center'}}>
-                            <Text>178</Text>
+                            <Text>{accountInfo.height}</Text>
                             <Text>cm</Text>
                         </View>
                     </View>
                     <View style={{flexDirection: 'row', alignContent: 'center', justifyContent: 'space-between', marginTop: 12}}>
                         <Text>몸무게</Text>
                         <View style={{flexDirection: 'row', alignContent: 'center'}}>
-                            <Text>74</Text>
+                            <Text>{accountInfo.weight}</Text>
                             <Text>kg</Text>
                         </View>
                     </View>
                     <View style={{flexDirection: 'row', alignContent: 'center', justifyContent: 'space-between', marginTop: 12}}>
                         <Text>나이</Text>
                         <View style={{flexDirection: 'row', alignContent: 'center'}}>
-                            <Text>25</Text>
+                            <Text>{accountInfo.age}</Text>
                             <Text>살</Text>
                         </View>
                     </View>
                     <View style={{flexDirection: 'row', alignContent: 'center', justifyContent: 'space-between', marginTop: 12}}>
                         <Text>성별</Text>
                         <View style={{flexDirection: 'row', alignContent: 'center'}}>
-                            <Text>남</Text>
+                            {
+                                accountInfo.gender === 'MALE' ? (
+                                    <Text>남</Text>
+                                ) : (
+                                    <Text>여</Text>
+                                )
+                            }
                         </View>
                     </View>
                     <TouchableOpacity onPress={moveToFixBasicDataScreen}>
@@ -141,13 +210,14 @@ function MyPageScreen({route, navigation}) {
                     </TouchableOpacity>
                 </View>
                 <TouchableOpacity onPress={moveToActivityLevelFixScreen}>
-                    <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#FFCED7', marginTop: 10}]}>
+                    {/* <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#FFCED7', marginTop: 10}]}>
                         <MuchExerciseIcon width={48} height={48} fillOpacity={1}/>
                         <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
                             <Text style={{fontSize: 20, fontWeight: 'bold'}}>운동 없으면 못삽니다.</Text>
                             <Text style={{fontSize: 12, paddingTop: 8}}>(평균 주 6~7회 운동)</Text>
                         </View>
-                    </View>
+                    </View> */}
+                    <ActivityButton/>
                 </TouchableOpacity>
                 <TouchableOpacity style={{alignItems: 'center'}} onPress={kakaoLogOut}>
                     <View style={[styles.logout_Button, {marginVertical: 10, width: 120}]}>
