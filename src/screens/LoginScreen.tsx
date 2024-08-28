@@ -10,9 +10,46 @@ import axios, {isCancel, AxiosError} from 'axios';
 
 import * as KakaoLogins from "@react-native-seoul/kakao-login";
 
+//redux-toolkit을 사용하기 위한 import
+import { useSelector, useDispatch } from "react-redux"
+import { RootState, AppDispatch } from '../store'
+import { setName, setEmail, setAge, setGender, setActivityLevel, setHeight, setWeight } from "../slices/accountInfoSlice";
+
 //내부 encrypted-storage와 async-storage에 접근하기 위해 import
 import EncryptedStorage from 'react-native-encrypted-storage';
 import AsyncStorage from '@react-native-async-storage/async-storage'
+
+//유저 정보 서버로부터 불러와서 redux에 저장하는 함수
+async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
+
+    try {
+
+        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile`; //post 요청에 사용할 url 설정
+        if(accessToken) {
+            //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다
+            const response = await axios.get(url, {
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
+                },
+            })
+
+            console.log('get 요청 날라온 응답: ', response.data);
+
+            //response로 넘어온 정보 redux에 저장
+            dispatch(setName(response.data.name));
+            dispatch(setEmail(response.data.email));
+            dispatch(setAge(response.data.age));
+            dispatch(setGender(response.data.gender));
+            dispatch(setActivityLevel(response.data.activityLevel));
+            dispatch(setWeight(response.data.weight));
+            dispatch(setHeight(response.data.height));
+
+        }
+    } catch (error) {
+        console.error('get 요청 중 에러 발생: ', error)
+    }
+}
 
 //로그인 화면!
 function LoginScreen({route, navigation})
@@ -20,6 +57,11 @@ function LoginScreen({route, navigation})
     let [isLogin, setIsLogin] = useState(false); //카카오 계정 로그인 여부를 관리하는 state
     let [kakaoLoginResponse, setKakaoLoginResponse] = useState(null); //카카오 로그인을 최초로 하면 여기에 부가 정보들을 받아올 것이다
     let [profile, setProfile] = useState(null); //카카오 프로필 정보를 관리하는 state
+
+    //accountInfo를 초기화하기 위한 코드
+    const dispatch: AppDispatch = useDispatch();
+
+    const accountInfo = useSelector((state: RootState) => state.accountInfo);
 
     //카카오 로그인이 성공적으로 되었는데, 회원가입이 안되어 있는 경우(isRegistered===false)이면, 세팅 화면으로 가야 한다
     function moveToSettingScreen(){
@@ -30,13 +72,6 @@ function LoginScreen({route, navigation})
     function moveToMainScreen(){
         navigation.replace('TabNavigator');
     }
-
-    //'Cannot update a component ('...') while rendering a different component ('...') 문제를 해결하기 위해서 useEffect를 사용한다
-    // useEffect(() => {
-    //     if(isLogin) { //로그인이 되어 있는 경우
-    //         moveToSettingScreen(); //세팅 화면으로 이동한다
-    //     }
-    // },[isLogin]);
 
 
     //카카오 로그인 수행을 위한 함수 (async 함수)
@@ -69,11 +104,9 @@ function LoginScreen({route, navigation})
                         },
                     })
                     
-                    //응답 데이터에서에서 "isRegistered", "name" 속성을 추출하여 로그에 출력
+                    //응답 데이터에서 "isRegistered", "name" 속성을 추출하여 로그에 출력
                     console.log('가입됨? => ', response.data.isRegistered);
                     console.log('이름이 뭐임? => ', response.data.name);
-                    console.log('초기 액세스 토큰은? =>', response.data.accessToken);
-                    console.log('초기 리프레시 토큰은? => ', response.data.refreshToken);
 
                     //내부 저장소에 accessToken 저장
                     await AsyncStorage.setItem(
@@ -87,9 +120,11 @@ function LoginScreen({route, navigation})
                         response.data.refreshToken
                     )
 
-                    //가입 여부에 따라 가는 곳이 나뉘어져야 한다 
-                    if(!response.data.isRegistered)
+                    //가입 여부에 따라 이동하는 Screen이 달라져야 한다 
+                    if(response.data.isRegistered)
                     {
+                        fetchUserProfile(response.data.accessToken, dispatch);
+                        console.log('저장된 계정 정보: ', accountInfo);
                         moveToMainScreen(); //메인 화면으로 간다
                     } else {
                         moveToSettingScreen(); //Setting 스크린으로 간다

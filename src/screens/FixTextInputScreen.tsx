@@ -10,8 +10,8 @@ import FixingInputComponent from '@components/FixingInput'
 import LoadingComponent from '@components/LoadingComponent'
 import SaveCompleteComponent from '@components/SaveCompleteComponent'
 
-//'드신 음식을 입력해 주세요' 화면 (실질적으로 프로젝트의 기술 집약 파트)
-function TextInputScreen({route, navigation, appState}){
+//식단 수정 화면
+function FixTextInputScreen({route, navigation, appState}){
 
     let [inputText, setInputText] = useState('');
     let [inputTextAvailable, setInputTextAvailable] = useState(true) //상단의 문장 입력하는 칸에다가 텍스트를 입력할 수 있는 상태 handling
@@ -21,24 +21,13 @@ function TextInputScreen({route, navigation, appState}){
     const updateStates = (direction: String) => {
       //'완료' 버튼을 누른 경우
       if(direction === 'forward') {
-        if(subComponentPageNum === 0) //subComponentPage가 0일 때 '완료' 버튼을 눌렀다면
-        {
-          setInputTextAvailable(false); //상단의 문장 입력하는 칸에다가 텍스트를 입력할 수 있는 상태 handling
-        }
         setCompleteBtnAvailable(false); //'완료' 버튼은 다시 누를 수 없는 상태가 되어야 한다
         setSubComponentPageNum(prevPageNum => prevPageNum + 1); //subComponentPage 번호를 +1 해준다
       //'뒤로가기' 버튼을 누른 경우
       } else if(direction === 'backward') {
         //각 상황에 맞게 state를 업데이트 해주어야 한다
-        if(subComponentPageNum === 2) {
+        if(subComponentPageNum === 1) { //영양성분 분석/저장중일 때..
           setInputTextAvailable(true);
-          setSubComponentPageNum(prevPageNum => prevPageNum - 2); //subComponentPage 번호를 -2 해준다
-        } else if(subComponentPageNum === 4) {
-          setSubComponentPageNum(prevPageNum => prevPageNum - 2);
-        } else if(subComponentPageNum === 1) {
-          setInputTextAvailable(true);
-          setSubComponentPageNum(prevPageNum => prevPageNum - 1); //subComponentPage 번호를 -2 해준다
-        } else if(subComponentPageNum === 3) {
           setSubComponentPageNum(prevPageNum => prevPageNum - 1); //subComponentPage 번호를 -2 해준다
         }
       }
@@ -47,19 +36,10 @@ function TextInputScreen({route, navigation, appState}){
     const renderSubComponent = () => {
       switch(subComponentPageNum) {
         case 0:
-          return null;
+          return <FixingInputComponent/>;
         case 1:
-          return <LoadingComponent comment="입력내용 분석중입니다" setSubComponentPageNum={setSubComponentPageNum}/>;
+          return <LoadingComponent comment="영양성분 분석/저장중입니다..." setSubComponentPageNum={setSubComponentPageNum}/>;
         case 2:
-          return (
-            <View style={{marginTop: 24}}>
-              <Text style={{fontSize: 20, fontWeight: 'ultralight'}}>입력내용 분석 결과입니다</Text>
-              <FixingInputComponent/>
-            </View>
-          );
-        case 3:
-          return <LoadingComponent comment="영양성분 분석/저장중입니다" setSubComponentPageNum={setSubComponentPageNum}/>;
-        case 4:
           return <SaveCompleteComponent/>
       } 
     }
@@ -95,16 +75,21 @@ function TextInputScreen({route, navigation, appState}){
           headerShadowVisible: false,
           headerBackVisible: false,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => {
-              if(subComponentPageNum === 0) //subComponent의 맨 첫페이지인 경우
-              {
-                nav.goBack();
-              } else { //그렇지 않은 경우
-                updateStates('backward');
-              }
-            }}>
-              <MaterialCommunityIcons name="chevron-left" size={32} />
-            </TouchableOpacity>
+            //수정이 완료된 마지막 페이지에선 뒤로가기 버튼을 없애본다
+            subComponentPageNum === 2 ? (
+                null
+            ) : (
+                <TouchableOpacity onPress={() => {
+                    if(subComponentPageNum === 0) //subComponent의 맨 첫페이지인 경우
+                    {
+                      nav.goBack();
+                    } else { //그렇지 않은 경우
+                      updateStates('backward');
+                    }
+                  }}>
+                    <MaterialCommunityIcons name="chevron-left" size={32} />
+                  </TouchableOpacity>
+            )
           ),
           headerRight: () => (
             <>
@@ -130,24 +115,14 @@ function TextInputScreen({route, navigation, appState}){
         <View style={{marginHorizontal: 28}}>
             {/* 제목 쪽 UI */}
             <View style={styles.header}>
-                <Text style={styles.titleTextStyleInInputScreen}>드신 음식을 입력해주세요</Text>
-            </View>
-            <View>
-                <TextInput
-                    style={[styles.textInputStyle, {marginTop: 24}]}
-                    onChangeText={handleInputChange}
-                    value={inputText}
-                    placeholder="예시) 삼겹살 2근, 콜라 1캔 먹었어."
-                    placeholderTextColor={'#a8a8a8'}
-                    editable={inputTextAvailable}/>
+                <Text style={styles.titleTextStyleInInputScreen}>식단을 수정해 주세요</Text>
             </View>
             {
               //subComponent는 아래의 함수에서 조건에 맞게 수행될 것이다
               renderSubComponent()
             }
         </View>
-
     );
 }
 
-export default TextInputScreen;
+export default FixTextInputScreen;

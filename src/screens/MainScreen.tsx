@@ -44,7 +44,7 @@ function MainScreen({route, navigation}) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   let [pointDate, setPointDate] = useState(new Date()); 
-  let [isCalendarFolded, setIsCalendarFolded] = useState(false); //Calendar의 visibility를 관리한다
+  let [isCalendarOpened, setIsCalendarOpened] = useState(false); //Calendar의 visibility를 관리한다
   let [isSectionFolded, setIsSectionFolded] = useState([true, true, true]); //아침,점심,저녁 식사를 표시한 section을 접었다 폈다 하는 state
 
   //redux에 저장되어 있는 markedDate 정보를 가져온다
@@ -72,17 +72,15 @@ function MainScreen({route, navigation}) {
   }
 
 
-  //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다
+  //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다 (의존성 배열로 isCalendarOpened, markedDate를 집어 넣는다)
   let toggleCalendar = useCallback(() => {
+
+    //렌더링은 markedDate 있는 곳 기준으로 되어야 한다
+    setPointDate(new Date(markedDate));
     
-    if(isCalendarFolded)
-    {
-      console.log('Yeah');
-      setPointDate(new Date(markedDate));
-    }
-    
-    setIsCalendarFolded(!isCalendarFolded);
-  }, [isCalendarFolded]);
+    //Calendar가 펴져 있는지, 접혀 있는지에 대한 상태값을 바꾼다
+    setIsCalendarOpened(!isCalendarOpened);
+  }, [isCalendarOpened, markedDate]);
 
   //'세부 영양성분' 내용을 담은 Bottom Sheet를 보여주는 함수 showDetailBottomSheet
   const showDetailBottomSheet = useCallback(() => {
@@ -126,12 +124,16 @@ function MainScreen({route, navigation}) {
   function moveToTextInputScreen(){
     navigation.navigate('TextInputScreen');
   }
+
+  function moveToFixTextInputScreen() {
+    navigation.navigate('FixTextInputScreen');
+  }
   
 
   return (
     <>
       {
-        isCalendarFolded ? (
+        isCalendarOpened ? (
           //캘린더가 펼쳐져 있는 경우
           <View style={{flex: 1, marginHorizontal: 20}}>
             <View style={styles.header}>
@@ -241,7 +243,7 @@ function MainScreen({route, navigation}) {
 
                     {/* 수정하기와 세부 영양성분 버튼 */}
                     <View style={styles.section_container_horizontal}>
-                      <TouchableOpacity onPress={()=>{moveToTextInputScreen}} style={{flex: 3}}>
+                      <TouchableOpacity onPress={moveToFixTextInputScreen} style={{flex: 3}}>
                         <View style={styles.section_Button_short}>
                           <FixDietIcon height={20} width={20} opacity={1}/>
                           <Text style={{textAlign: 'center', marginLeft: 8, fontSize: 14}}>수정하기</Text>

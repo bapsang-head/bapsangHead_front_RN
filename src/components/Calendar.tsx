@@ -3,9 +3,9 @@ import {View, Text, FlatList, ScrollView, Dimensions, TouchableOpacity} from 're
 import * as Progress from 'react-native-progress';
 import {styles} from '../styles/styles'
 
-import { useSelector, useDispatch } from "react-redux"
+import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
-import { setMarkedDate } from '../slices/markedDateSlice'
+import { setMarkedDate } from '../slices/markedDateSlice';
 
 import { 
     format,
@@ -84,15 +84,15 @@ function renderCalendar(pointDate: Date,
             // 이전/다음 달의 날짜를 터치한 경우
             const newPageIndex = isPrevMonth ? pageIndex - 1 : pageIndex + 1;
 
-            // 강제 스크롤 후 상태 업데이트
+            // 강제 스크롤 후 상태 업데이트 (애니메이션 true)
             flatListRef.current.scrollToIndex({ index: newPageIndex, animated: true });
 
             //강제로 스크롤한 후 offsetX를 초기화해야 함 (해당 코드가 없으면 특정 상황에서 prevOffsetX가 업데이트 되지 않는 상황이 발생)
             const offsetX = newPageIndex * contentWidth;
             prevOffsetX.current = offsetX; //새로운 위치에 대한 offsetX 설정
 
-            updateMarkedDate(day.toISOString());
             setPointDate(day);
+            updateMarkedDate(day.toISOString());
         }
     };
     

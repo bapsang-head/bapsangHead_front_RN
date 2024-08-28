@@ -25,7 +25,8 @@ import LoginScreen from '@screens/LoginScreen';
 import SettingScreen from '@screens/SettingScreen';
 import ActivityLevelFixScreen from '@screens/ActivityLevelFixScreen';
 import FixBasicDataScreen from '@screens/FixBasicDataScreen';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import FixTextInputScreen from '@screens/FixTextInputScreen';
+
 
 
 // Define the type for the navigation stack
@@ -101,6 +102,7 @@ function StackNavigation() {
       <Stack.Screen name="TextInputScreen" component={TextInputScreen}/>
       <Stack.Screen name="ActivityLevelFixScreen" component={ActivityLevelFixScreen} />
       <Stack.Screen name="FixBasicDataScreen" component={FixBasicDataScreen}/>
+      <Stack.Screen name="FixTextInputScreen" component={FixTextInputScreen}/>
     </Stack.Navigator>
   );
 }

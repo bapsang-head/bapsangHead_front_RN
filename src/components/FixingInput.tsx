@@ -70,8 +70,7 @@ function FixingInput(props) {
 
     return (
         <>
-        <ScrollView showsVerticalScrollIndicator={false} style={{marginTop: 24}}>
-            <Text style={{fontSize: 20, fontWeight: 'ultralight'}}>입력내용 분석 결과입니다</Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
             {/* 추후, 분셕 결과를 불러올 때, 분석한 결과만큼 찍어내야 하는 View */}
             { textInput }
             <TouchableOpacity style={{marginTop: 20}} onPress={addDataElement}>

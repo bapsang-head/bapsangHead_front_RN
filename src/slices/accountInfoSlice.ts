@@ -3,6 +3,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 //회원가입 정보
 interface accountInfo {
+    email: string | null,
+    name: string | null,
     height: number | null,
     weight: number | null,
     age: number | null,
@@ -11,6 +13,8 @@ interface accountInfo {
 }
 
 const accountInitialState: accountInfo = {
+    email: null,
+    name: null,
     height: null,
     weight: null,
     age: null,
@@ -22,6 +26,12 @@ let accountInfoSlice = createSlice({
     name: 'accountInfo',
     initialState: accountInitialState,
     reducers: {
+        setEmail: (state, action: PayloadAction<string | null>) => {
+            state.email = action.payload;
+        },
+        setName: (state, action: PayloadAction<string | null>) => {
+            state.name = action.payload;
+        },
         setHeight: (state, action: PayloadAction<number | null>) => {
             state.height = action.payload;
         },
@@ -43,6 +53,8 @@ let accountInfoSlice = createSlice({
 
 //action을 export
 export const {
+    setEmail,
+    setName,
     setHeight,
     setWeight,
     setAge,

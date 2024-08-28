@@ -22,7 +22,7 @@ import LogoutIcon from '../assets/svg/logout.svg';
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
-import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
+import { setHeight, setWeight, setAge, setGender, setActivityLevel, setEmail, setName } from "../slices/accountInfoSlice";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -58,13 +58,10 @@ function MyPageScreen({route, navigation}) {
     }
 
     console.log("MyPage rendering");
-    console.log('활동량: ', accountInfo.activityLevel);
+    console.log('accountInfo: ', accountInfo);
 
     let [isLogOut, setIsLogOut] = useState(false); //로그아웃이 되었는지 확인한다
     let [logOutString, setLogOutString] = useState(null); 
-
-    let [name, setName] = useState('허준호'); //이름 state
-    let [email, setEmail] = useState('gichul@kakao.com'); //이메일 state
 
     //카카오 로그아웃 수행을 위한 함수
     async function kakaoLogOut() {
@@ -74,7 +71,6 @@ function MyPageScreen({route, navigation}) {
         try {
             logOutString = await KakaoLogins.logout(); //카카오 로그인 수행
             if (logOutString != null) {
-                setIsLogOut(true); //로그인 여부를 true로 변경
                 console.log(logOutString); //받아온 정보 log에 찍어보기
                 await EncryptedStorage.removeItem('refreshToken'); //refreshToken 삭제
                 await AsyncStorage.removeItem('accessToken'); //accessToken 삭제
@@ -160,8 +156,8 @@ function MyPageScreen({route, navigation}) {
                             source={require('../assets/profile.png')}
                             resizeMode={'stretch'} />
                         <View style={{alignContent: 'center', marginLeft: 16, paddingVertical: 12, justifyContent: 'space-around'}}>
-                            <Text style={{fontSize: 24, fontWeight: 'bold'}}>{name}</Text>
-                            <Text style={{fontSize: 16}}>{email}</Text>
+                            <Text style={{fontSize: 24, fontWeight: 'bold'}}>{accountInfo.name}</Text>
+                            <Text style={{fontSize: 16}}>{accountInfo.email}</Text>
                         </View>
                     </View>
                 </View>
@@ -210,13 +206,6 @@ function MyPageScreen({route, navigation}) {
                     </TouchableOpacity>
                 </View>
                 <TouchableOpacity onPress={moveToActivityLevelFixScreen}>
-                    {/* <View style={[styles.activityLevelButton_inMyPage, {backgroundColor: '#FFCED7', marginTop: 10}]}>
-                        <MuchExerciseIcon width={48} height={48} fillOpacity={1}/>
-                        <View style={{justifyContent: 'center', marginLeft: 28, opacity: 1}}>
-                            <Text style={{fontSize: 20, fontWeight: 'bold'}}>운동 없으면 못삽니다.</Text>
-                            <Text style={{fontSize: 12, paddingTop: 8}}>(평균 주 6~7회 운동)</Text>
-                        </View>
-                    </View> */}
                     <ActivityButton/>
                 </TouchableOpacity>
                 <TouchableOpacity style={{alignItems: 'center'}} onPress={kakaoLogOut}>

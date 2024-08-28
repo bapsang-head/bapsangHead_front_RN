@@ -25,13 +25,14 @@ import WomanIcon from '../assets/svg/woman_2.svg';
 
 function FixBasicDataScreen({route, navigation, appState}) {
 
-    let [manPressed, setManPressed] = useState(false); //남자 버튼이 눌렸을 때
-    let [womanPressed, setWomanPressed] = useState(false); //여자 버튼이 눌렸을 때
-
     //실험용 코드 (redux-toolkit으로 accountInfo를 전역적으로 관리하고 있음)
     let accountInfo = useSelector((state: RootState) => state.accountInfo);
 
     console.log(accountInfo);
+
+    //accountInfo에 저장되어 있는 값을 기준으로 해당 값들을 배정한다
+    let [manPressed, setManPressed] = useState(accountInfo.gender === 'MALE' ? true : false); //남자 버튼이 눌렸을 때
+    let [womanPressed, setWomanPressed] = useState(accountInfo.gender === 'FEMALE' ? true : false); //여자 버튼이 눌렸을 때
 
     //아래 3개의 값만 필요할 듯 (gender는 버튼 선택으로 정해지니까..)
     let height = accountInfo.height;
