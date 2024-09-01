@@ -10,19 +10,20 @@ import RemoveIcon from '../assets/svg/remove.svg'
 //1차 분석 후 나오는 UI
 function FixingInput(props) {
 
-    let [data, setData] = useState([['삼치간장조림', '100', 'g'], ['엄마는외계인', '2', '스푼'], ['동원고추참치', '2', '캔']]);
+    //props로 넘어온 1차 분석 결과를 data의 초기 값으로 설정한다
+    let [data, setData] = useState(props.analysisResult_First);
 
     //사용자가 data를 수정 시 업데이트하기 위한 updateDataElement 함수
-    const updateDataElement = (index, index_2, value) => {
+    const updateDataElement = (index, option: String, value) => {
         const newData = [...data];
-        newData[index][index_2] = value;
+        newData[index].option = value;
         setData(newData)
     }
 
     //입력내용 추가하기 버튼을 눌렀을 때 수행하는 method
     const addDataElement = () => {
         const newData = [...data];
-        newData.push(['', '', '']); //빈 데이터들로 구성되어 있는 배열 하나 newData에 push
+        newData.push({'food': '', 'quantity': '', 'unit': ''}); //빈 데이터들로 구성되어 있는 배열 하나 newData에 push
         setData(newData);
     }
 
@@ -46,21 +47,21 @@ function FixingInput(props) {
                     </TouchableOpacity>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.5, marginRight: 4, height: 36}]}
-                        onChangeText={(text) => updateDataElement(i, 0, text)} //첫 번째 요소(음식명)을 업데이트
-                        value={ele[0]}
-                        placeholder="삼치간장조림"
+                        onChangeText={(text) => updateDataElement(i, 'food', text)} //첫 번째 요소(음식명)을 업데이트
+                        value={ele.food}
+                        placeholder="음식명"
                         placeholderTextColor={'#a8a8a8'}/>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.2, marginHorizontal: 4, height: 36}]}
-                        onChangeText={(text) => updateDataElement(i, 1, text)} //두 번째 요소(수량)을 업데이트
-                        value={ele[1]}
-                        placeholder="100"
+                        onChangeText={(text) => updateDataElement(i, 'quantity', text)} //두 번째 요소(수량)을 업데이트
+                        value={ele.quantity}
+                        placeholder="숫자"
                         placeholderTextColor={'#a8a8a8'}/>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.1, marginLeft: 4, height: 36}]}
-                        onChangeText={(text) => updateDataElement(i, 2, text)} //세 번째 요소(단위)를 업데이트
-                        value={ele[2]}
-                        placeholder="g"
+                        onChangeText={(text) => updateDataElement(i, 'unit', text)} //세 번째 요소(단위)를 업데이트
+                        value={ele.unit}
+                        placeholder="단위"
                         placeholderTextColor={'#a8a8a8'}/>
                 </View>
             );

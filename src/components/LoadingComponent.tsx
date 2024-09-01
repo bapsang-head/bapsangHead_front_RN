@@ -10,12 +10,14 @@ import {styles} from '../styles/styles';
 function LoadingComponent(props) {
     console.log(props.comment)
 
-    //지금은 Data를 받아오는 것이 없기 때문에, 대충 2초 세고 다음 sub 컴포넌트로 넘어가도록 설계되어 있다
+    //1차, 2차 분석 관련하여 comment로 구분하여 각각의 함수를 수행하고 있다.
     useEffect(()=> {
-        setTimeout(()=>{
-            props.setSubComponentPageNum(prevNum=>prevNum+1);
-        },2000)
-    }, [props.setSubComponentPageNum])
+        //1차 분석 진행해야 할 때
+        if(props.comment === '입력내용 분석중입니다')
+        {   
+            props.userInputAnalysis_First();
+        }
+    }, [props.comment])
     
     return (
         <View style={{marginTop: 160, flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center'}}>

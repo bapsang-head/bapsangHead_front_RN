@@ -52,7 +52,10 @@ function TabNavigator() {
         tabBarInactiveTintColor: '#000000', // Inactive 상태의 아이콘 색상
         tabBarShowLabel: false, // Label을 보여줄지 여부
         tabBarStyle: {
+          height: 76,
           backgroundColor: '#FFFFFF', // 전체 배경색 설정
+          elevation: 0, //안드로이드에서 TabBar의 그림자 제거
+          shadowOpacity: 0, //iOS에서 TabBar의 그림자 제거
         },
       }}>
       <Tab.Screen 
@@ -60,8 +63,8 @@ function TabNavigator() {
         component={MainScreen}
         options={{
           tabBarLabel: 'Main',
-          tabBarIcon: ({color, size}) => (
-            <MaterialCommunityIcons name="home" color={color} size={size} />
+          tabBarIcon: ({color}) => (
+            <MaterialCommunityIcons name="home" color={color} size={36} />
           ),
         }}
         />
@@ -70,8 +73,8 @@ function TabNavigator() {
         component={DetailScreen}
         options={{
           tabBarLabel: 'Details',
-          tabBarIcon: ({color, size}) => (
-            <MaterialCommunityIcons name="bell" color={color} size={size} />
+          tabBarIcon: ({color}) => (
+            <MaterialCommunityIcons name="chart-box-outline" color={color} size={36} />
           ),
         }}/>
       <Tab.Screen 
@@ -79,8 +82,8 @@ function TabNavigator() {
         component={MyPageScreen}
         options={{
           tabBarLabel: 'MyPage',
-          tabBarIcon: ({color, size}) => (
-            <MaterialCommunityIcons name="account" color={color} size={size} />
+          tabBarIcon: ({color}) => (
+            <MaterialCommunityIcons name="account" color={color} size={36} />
           ),
         }}/>
     </Tab.Navigator>

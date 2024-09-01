@@ -27,6 +27,7 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
                 },
             })
 
+            console.log('accessToken: ', accessToken);
             console.log('get 요청 날라온 응답: ', response);
 
             //response로 넘어온 정보 redux에 저장
@@ -64,6 +65,7 @@ async function checkAccessToken(navigation, dispatch: AppDispatch) {
             } else {
                 console.log('AccessToken이 유효합니다. 로그인을 진행합니다.');
                 fetchUserProfile(accessToken, dispatch);
+                
                 navigation.replace("TabNavigator"); //로그인을 바로 진행합니다
             }
         } else {
