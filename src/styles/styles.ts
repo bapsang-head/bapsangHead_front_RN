@@ -47,14 +47,14 @@ export const styles = StyleSheet.create({
 
   //Main 화면의 한 section(아침식사 등..) 스타일
   section: {
-    backgroundColor: '#E5FFC4',
+    backgroundColor: '#f0ffd4',
     borderRadius: 12,
     padding: 16,
     marginVertical: 10,
   },
 
   section_inDetailPage: { //분석 페이지에서 상단에 있는 section 스타일
-    backgroundColor: '#E5FFC4',
+    backgroundColor: '#f0ffd4',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -63,7 +63,7 @@ export const styles = StyleSheet.create({
 
   //Main 화면의 맨 밑의 section style
   section_Bottom: {
-    backgroundColor: '#e0ffcc',
+    backgroundColor: '#f0ffd4',
     borderRadius: 10,
     padding: 10,
     marginVertical: 10,
@@ -107,7 +107,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 18,
-    backgroundColor: '#BFE99E',
+    backgroundColor: '#bbf3be',
   },
 
   //Main 화면의 section 안에 들어가는 버튼 style (긴 버전)
@@ -118,7 +118,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 76,
     height: 48,
     borderRadius: 18,
-    backgroundColor: '#BFE99E',
+    backgroundColor: '#bbf3be',
   },
 
   //Main 화면의 section 안에 들어가는 칼로리 표시를 위한 style
@@ -238,7 +238,7 @@ export const styles = StyleSheet.create({
   },
 
   calendarContainerFolded: { //calendarContainerFolded(접혀진 한 주치 달력) 높이는 고정값으로 한다
-    height: 72,
+    height: 100,
     backgroundColor: 'white'
   },
 
@@ -248,12 +248,20 @@ export const styles = StyleSheet.create({
   },
 
   calendarMarker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#BFE99E',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center'
+  },
+
+  calendarInputStatusMarker: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8
   },
 
   //마이페이지에서의 활동량 버튼
@@ -274,7 +282,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    backgroundColor: '#BFE99E'
+    backgroundColor: '#bbf3be'
   },
 
   //'입력내용 분석 결과입니다' 화면에서의 '-'(제거) 버튼 style
@@ -284,7 +292,7 @@ export const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#BFE99E',
+    backgroundColor: '#bbf3be',
   },
 
   //'입력내용 분석 결과입니다' 화면에서의 '입력내용 추가하기' 버튼 style
@@ -296,6 +304,6 @@ export const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#BFE99E'
+    backgroundColor: '#bbf3be'
   }
 });

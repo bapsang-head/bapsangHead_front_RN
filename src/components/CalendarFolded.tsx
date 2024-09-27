@@ -54,6 +54,15 @@ function renderWeekCalendar(pointDate: Date,
             {
                 weekCalendarDays.map((day, index) => {
                     let style;
+                    let markerStyle;
+
+                    //달력에 표시해 주어야 할 날짜의 여부에 따라, marker의 backgroundColor가 달라진다
+                    if(format(day, 'yyyy-MM-dd') === format(new Date(markedDate), 'yyyy-MM-dd'))
+                    {
+                        markerStyle={backgroundColor: '#bbf3be'}
+                    } else {
+                        markerStyle={backgroundColor: '#00000000'} //완전 투명함(색없음)
+                    }
 
                     //해당 경우엔 모든 날짜를 검은 색으로 표시
                     style={color: "black"};
@@ -71,13 +80,12 @@ function renderWeekCalendar(pointDate: Date,
                             {
                                 //선택한 날짜인 경우(전역적으로 관리 중인 markedDate인 경우) 마커를 표시하고, 아니면 그냥 text만 표시
                                 //day와 markedDate를 직접적으로 비교하게 되면, 시간에서 미세하게 차이가 발생하므로, 아래와 같이 비교해야 함
-                                (format(day, 'yyyy-MM-dd') === format(new Date(markedDate), 'yyyy-MM-dd')) ? (
-                                    <View style={styles.calendarMarker}>
-                                        <Text style={[style, {fontSize: 20}]}>{getDate(day)}</Text>
+                                <View style={{justifyContent: 'center', alignItems: 'center'}}>
+                                    <View style={[styles.calendarMarker, markerStyle]}>
+                                        <Text style={[style, {fontSize: 24}]}>{getDate(day)}</Text>
                                     </View>
-                                ) : (
-                                    <Text style={[style, {fontSize: 20}]}>{getDate(day)}</Text>
-                                )
+                                    <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'green'}]}/>
+                                </View>
                             }
                         </TouchableOpacity>
                     )

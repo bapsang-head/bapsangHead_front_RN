@@ -8,7 +8,7 @@ import SaveCompleteIcon from '../assets/svg/add_task.svg'
 
 
 //2차 분석 완료 후 '식단 저장이 완료되었습니다' 화면 Component
-function LoadingComponent(props) {
+function SaveCompleteComponent(props) {
     return (
         <View style={{marginTop: 160, justifyContent: 'center', alignItems: 'center'}}>
             <SaveCompleteIcon height={48} width={48}/>
@@ -17,4 +17,4 @@ function LoadingComponent(props) {
     )
 }
 
-export default LoadingComponent;
+export default SaveCompleteComponent;

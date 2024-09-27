@@ -49,11 +49,6 @@ function SettingScreen_Page1() {
 //두 번째 설정 화면
 function SettingScreen_Page2() { 
     
-    // let [height, setHeight] = useState(''); //키
-    // let [weight, setWeight] = useState(''); //몸무게
-    // let [age, setAge] = useState(''); //나이
-    // let [gender, setGender] = useState(''); //성별
-    
     let [manPressed, setManPressed] = useState(false); //남자 버튼이 눌렸을 때
     let [womanPressed, setWomanPressed] = useState(false); //여자 버튼이 눌렸을 때
 

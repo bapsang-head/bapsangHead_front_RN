@@ -1,7 +1,7 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, Animated, SafeAreaView } from 'react-native';
+import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, SafeAreaView } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import moment from 'moment';
 import { styles } from '../styles/styles';
@@ -18,22 +18,32 @@ import SlimArrowUpIcon from '../assets/svg/slimArrow_Up.svg'
 import WatchDetailsIcon from '../assets/svg/watch_detail.svg'
 import FixDietIcon from '../assets/svg/fix_diet.svg'
 
-//date와 관련하여 직접 control하기 위한 date-fns 라이브러리 import!
-import { 
-  getYear,
-  getMonth
-  } from 'date-fns'; 
+import Animated, {
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from "../store";
 import { setMarkedDate } from '../slices/markedDateSlice'
+
+import {
+  getDate,
+  getYear,
+  getMonth,
+} from "date-fns"
 
 //components import
 import BottomSheetModal from '@components/BottomSheetModal';
 import Calendar from '@components/Calendar';
 import CalendarFolded from '@components/CalendarFolded';
 import DetailBottomSheetModal from '@components/DetailBottomSheetModal'
+import MainScreenSection from '@components/MainScreenSection';
 import { BottomSheetDefaultBackdropProps } from '@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types';
+
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 //메인화면 Component
 function MainScreen({route, navigation}) {
@@ -45,7 +55,11 @@ function MainScreen({route, navigation}) {
 
   let [pointDate, setPointDate] = useState(new Date()); 
   let [isCalendarOpened, setIsCalendarOpened] = useState(false); //Calendar의 visibility를 관리한다
+
+
   let [isSectionFolded, setIsSectionFolded] = useState([true, true, true]); //아침,점심,저녁 식사를 표시한 section을 접었다 폈다 하는 state
+  
+  let [loadedDietData, setLoadedDietData] = useState(null);
 
   //redux에 저장되어 있는 markedDate 정보를 가져온다
   let markedDate = useSelector((state: RootState) => state.markedDate.date);
@@ -55,6 +69,24 @@ function MainScreen({route, navigation}) {
   const updateMarkedDate = (date: string) => {
     dispatch(setMarkedDate(date));
   }
+
+  //식단 정보는 markedDate가 변할 때만 불러오면 된다
+  useEffect(()=>{
+    let imsi = loadDietData(markedDate);
+    setLoadedDietData(imsi);
+  },[markedDate]);
+  
+
+  //AsyncStorage에 저장된 식단 정보를 불러오는 함수
+  const loadDietData = async (date) => {
+    try {
+      const jsonValue = await AsyncStorage.getItem(`diet_${date}`);
+      return jsonValue != null ? JSON.parse(jsonValue) : null; //불러온 정보가 null이 아니면, parsing하여 돌려주고, 아니면 null을 돌려준다.
+    } catch (e) {
+      console.error('AsyncStorage로부터 식단 Data를 불러오는 데 실패했습니다.');
+    }
+  };
+
 
   //section을 접고, 피고, 할 수 있도록 하는 함수
   //배열로 된 state는 상태를 변경할 때, 아래와 같은 형태를 따라야 한다
@@ -75,7 +107,7 @@ function MainScreen({route, navigation}) {
   //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다 (의존성 배열로 isCalendarOpened, markedDate를 집어 넣는다)
   let toggleCalendar = useCallback(() => {
 
-    //렌더링은 markedDate 있는 곳 기준으로 되어야 한다
+    //렌더링은 markedDate 있는 날짜 기준으로 렌더링 되어야 한다
     setPointDate(new Date(markedDate));
     
     //Calendar가 펴져 있는지, 접혀 있는지에 대한 상태값을 바꾼다
@@ -114,223 +146,116 @@ function MainScreen({route, navigation}) {
     ),
     []
   );
-  
 
-  //현재 월과 연도를 추출한다
-  //date-fns 라이브러리의 getMonth는 1월달이 0부터 시작한다(즉, +1 해주어야 한다)
+  //year, month (기준이 되는 pointDate 기준으로 렌더링)
   let year = getYear(pointDate);
-  let month = (getMonth(pointDate))+1;
-
-  function moveToTextInputScreen(){
-    navigation.navigate('TextInputScreen');
-  }
-
-  function moveToFixTextInputScreen() {
-    navigation.navigate('FixTextInputScreen');
-  }
+  let month = getMonth(pointDate) + 1;
   
 
   return (
     <>
-      {
-        isCalendarOpened ? (
-          //캘린더가 펼쳐져 있는 경우
-          <View style={{flex: 1, marginHorizontal: 20}}>
-            <View style={styles.header}>
-              <Text style={styles.monthText}>{year}년 {month}월</Text>
-              <TouchableOpacity onPress={toggleCalendar}>
-                <ArrowUpIcon width={36} height={36}/>
-              </TouchableOpacity>
-            </View>
-            <Calendar
-              pointDate={pointDate}
-              setPointDate={setPointDate}
-            />
+    {
+      isCalendarOpened ? (
+        //캘린더가 펼쳐져 있는 경우
+        <View style={{flex: 1, marginHorizontal: 20}}>
+          <View style={styles.header}>
+            <Text style={styles.monthText}>{year}년 {month}월</Text>
+            <TouchableOpacity onPress={toggleCalendar}>
+              <ArrowUpIcon width={36} height={36}/>
+            </TouchableOpacity>
           </View>
-        ) : (
-        //캘린더가 접혀져 있는 경우
-        <>
-          <View style={{flex: 1, marginHorizontal: 20}}>
+          <Calendar
+            pointDate={pointDate}
+            setPointDate={setPointDate}
+          />
+        </View>
+      ) : (
+      //캘린더가 접혀져 있는 경우
+      <>
+        <View style={{flex: 1, marginHorizontal: 20}}>
 
-            <View style={styles.header}>
-              <Text style={styles.monthText}>{year}년 {month}월</Text>
-              <TouchableOpacity onPress={toggleCalendar}>
-                <ArrowDownIcon width={36} height={36}/>
-              </TouchableOpacity>
-            </View>
-
-            {/* 접힌 한 주치 Calendar가 나올 구역임 */}
-            <CalendarFolded
-              pointDate={pointDate}
-              setPointDate={setPointDate}
-            />
-
-            {/* 스크롤 뷰 안에는 아침,점심,저녁 식단 입력을 확인할 수 있는 창들이 나올 것임 */}
-            <ScrollView showsVerticalScrollIndicator={false}>
-
-              {/* 한 section(아침 식단)의 형태는 아래와 같다. */}
-              <View style={styles.section}>
-                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-                  {/* 아침 식사 구역 */}
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <MorningIcon height={32} width={32} opacity={1}/>
-                    <Text style={styles.sectionTitle}>아침 식사</Text>
-                  </View>
-                  {/* 우측에 붙어있는 화살표 */}
-                  <TouchableOpacity onPress={()=>{handleSectionFoldedState(0)}}>
-                  {
-                    isSectionFolded[0] ? (
-                      <SlimArrowDownIcon height={32} width={32} opacity={1}/>
-                    ) : (
-                      <SlimArrowUpIcon height={32} width={32} opacity={1}/>
-                    )
-                  }
-                  </TouchableOpacity>
-                </View>
-                {/* Section이 접혀 있는지 아닌지를 확인한다. */}
-                {
-                  isSectionFolded[0] ? (
-                    null
-                  ) : (
-                    <>
-                    <View style={styles.section_contents}>
-                      <Text style={{fontSize: 16, fontWeight: 'light'}}>아직 추가된 식단이 없어요!</Text>
-                    </View>
-                    <TouchableOpacity onPress={moveToTextInputScreen}>
-                      <View style={styles.section_Button_long}>
-                        <PenIcon height={24} width={24} opacity={1}/>
-                        <Text>텍스트로 기록하기</Text>
-                      </View>
-                    </TouchableOpacity>
-                    </>
-                  )
-                }
-                
-                
-              </View>
-
-
-              {/* 한 section(점심 식단)의 형태는 아래와 같다. */}
-              <View style={styles.section}>
-                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-                  {/* 점심 식사 구역 */}
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <LunchIcon height={32} width={32} opacity={1}/>
-                    <Text style={styles.sectionTitle}>점심 식사</Text>
-                  </View>
-                  {/* 우측에 붙어있는 화살표 */}
-                  <TouchableOpacity onPress={()=>{handleSectionFoldedState(1)}}>
-                  {
-                    isSectionFolded[1] ? (
-                      <SlimArrowDownIcon height={32} width={32} opacity={1}/>
-                    ) : (
-                      <SlimArrowUpIcon height={32} width={32} opacity={1}/>
-                    )
-                  }
-                  </TouchableOpacity>
-                </View>
-                {
-                  isSectionFolded[1] ? (
-                    null
-                  ) : (
-                    <>
-                    {/* 식사 내용(추후 DB에서 불러올 때에는, map 함수를 이용하여 불러오면 될 듯, 지금은 Dummy Data) */}
-                    <Text style={{fontSize: 20, fontWeight: 'bold', marginVertical: 8, marginLeft: 12}}>3,982kcal</Text>                                      
-                    <Text style={{marginVertical: 4, marginLeft: 12}}>삼겹살 1근</Text>
-                    <Text style={{marginVertical: 4, marginLeft: 12}}>BBQ 황금올리브 1마리</Text>
-                    <Text style={{marginVertical: 4, marginLeft: 12}}>코카콜라 제로 1캔</Text>
-                    <Text style={{marginVertical: 4, marginLeft: 12}}>멸치쇼핑 땅콩 1줌</Text>
-
-                    {/* 수정하기와 세부 영양성분 버튼 */}
-                    <View style={styles.section_container_horizontal}>
-                      <TouchableOpacity onPress={moveToFixTextInputScreen} style={{flex: 3}}>
-                        <View style={styles.section_Button_short}>
-                          <FixDietIcon height={20} width={20} opacity={1}/>
-                          <Text style={{textAlign: 'center', marginLeft: 8, fontSize: 14}}>수정하기</Text>
-                        </View>
-                      </TouchableOpacity>
-                      <View style={{flex: 1}}></View>
-                      <TouchableOpacity onPress={showDetailBottomSheet} style={{flex: 3}}>
-                        <View style={styles.section_Button_short}>
-                          <WatchDetailsIcon height={20} width={20} opacity={1}/>
-                          <Text style={{textAlign: 'center', marginLeft: 8, fontSize: 14}}>세부 영양성분</Text>
-                        </View>
-                      </TouchableOpacity>
-                    </View>
-                    </>
-                  )
-                }
-              </View>
-                
-              {/* 한 section의 형태는 아래와 같다. */}
-              <View style={[styles.section, {marginBottom: 64}]}>
-                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-                  {/* 저녁 식사 구역 */}
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <DinnerIcon height={32} width={32} opacity={1}/>
-                    <Text style={styles.sectionTitle}>저녁 식사</Text>
-                  </View>
-                  {/* 우측에 붙어있는 화살표 */}
-                  <TouchableOpacity onPress={()=>{handleSectionFoldedState(2)}}>
-                  {
-                    isSectionFolded[2] ? (
-                      <SlimArrowDownIcon height={32} width={32} opacity={1}/>
-                    ) : (
-                      <SlimArrowUpIcon height={32} width={32} opacity={1}/>
-                    )
-                  }
-                  </TouchableOpacity>
-                </View>
-                {
-                  isSectionFolded[2] ? (
-                    null
-                  ) : (
-                    <>  
-                    <View style={styles.section_contents}>
-                      <Text style={{fontSize: 16, fontWeight: 'light'}}>아직 추가된 식단이 없어요!</Text>
-                    </View>
-                    <TouchableOpacity onPress={moveToTextInputScreen}>
-                        <View style={styles.section_Button_long}>
-                          <PenIcon height={24} width={24} opacity={1}/>
-                          <Text>텍스트로 기록하기</Text>
-                        </View>
-                      </TouchableOpacity>
-                    </>
-                  )
-                }
-              </View>
-            </ScrollView>
+          <View style={styles.header}>
+            <Text style={styles.monthText}>{year}년 {month}월</Text>
+            <TouchableOpacity onPress={toggleCalendar}>
+              <ArrowDownIcon width={36} height={36}/>
+            </TouchableOpacity>
           </View>
 
-          <BottomSheet 
-            ref={bottomSheetRef} 
-            index={0} //초기 index를 명확히 설정
-            snapPoints={['8%', '20%']}
-            enablePanDownToClose={false}
-            style={{ display: isDetailModalOpen ? 'none' : 'flex'}}> 
-            <View style={styles.bottomSheetContent}>
-              <Text>나의 일일 칼로리 섭취 현황 확인하기</Text>
-              <BottomSheetModal onClose={false} MyActivity={3250} TodayEatenCalories={1000}/>
-            </View>
-          </BottomSheet>
+          {/* 접힌 한 주치 Calendar가 나올 구역임 */}
+          <CalendarFolded
+            pointDate={pointDate}
+            setPointDate={setPointDate}
+          />
 
-          <BottomSheet
-            ref={detailBottomSheetRef}
-            index={-1} //초기 index를 명확히 설정
-            snapPoints={['60%']}
-            enablePanDownToClose={true} //스크롤로 닫을 수 있도록 설정
-            onChange={handleSheetChanges} //인덱스 변화 감지
-            backdropComponent={renderBackDrop} //Custom Backdrop 적용
-            >
-            <View>
-              <DetailBottomSheetModal onClose={false}/>
-            </View>
-          </BottomSheet>
-        </>
-        )
-      }
+          {/* 스크롤 뷰 안에는 아침,점심,저녁 식단 입력을 확인할 수 있는 창들이 나올 것임 */}
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <MainScreenSection eatingTime={'아침 식사'} navigation={navigation}/>
+            <MainScreenSection eatingTime={'점심 식사'} navigation={navigation}/>
+            <MainScreenSection eatingTime={'저녁 식사'} navigation={navigation}/>
+          </ScrollView>
+        </View>
+
+        <BottomSheet 
+          ref={bottomSheetRef} 
+          index={0} //초기 index를 명확히 설정
+          snapPoints={['8%', '20%']}
+          enablePanDownToClose={false}
+          style={{ display: isDetailModalOpen ? 'none' : 'flex'}}> 
+          <View style={styles.bottomSheetContent}>
+            <Text>나의 일일 칼로리 섭취 현황 확인하기</Text>
+            <BottomSheetModal onClose={false} MyActivity={3250} TodayEatenCalories={1000}/>
+          </View>
+        </BottomSheet>
+
+        <BottomSheet
+          ref={detailBottomSheetRef}
+          index={-1} //초기 index를 명확히 설정
+          snapPoints={['60%']}
+          enablePanDownToClose={true} //스크롤로 닫을 수 있도록 설정
+          onChange={handleSheetChanges} //인덱스 변화 감지
+          backdropComponent={renderBackDrop} //Custom Backdrop 적용
+          >
+          <View>
+            <DetailBottomSheetModal onClose={false}/>
+          </View>
+        </BottomSheet>
+      </>
+      )
+    }
     </>
+    
   );
 }
 
-  export default MainScreen;
+//메인화면 Style 관련 시트
+const MainStyles = StyleSheet.create({
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  parent: {
+    width: 200,
+  },
+  wrapper: {
+    width: '100%',
+    position: 'absolute',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  animatedView: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  box: {
+    height: 120,
+    width: 120,
+    color: '#f8f9ff',
+    backgroundColor: '#b58df1',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
+export default MainScreen;

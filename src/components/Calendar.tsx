@@ -104,6 +104,15 @@ function renderCalendar(pointDate: Date,
                     <View key={index} style={{flex: 1, flexDirection: 'row', justifyContent: 'space-around'}}>
                         {week.map((day: any, subIndex: React.Key) => {
                             let style;
+                            let markerStyle;
+
+                            //달력에 표시해 주어야 할 날짜의 여부에 따라, marker의 backgroundColor가 달라진다
+                            if(format(day, 'yyyy-MM-dd') === format(new Date(markedDate), 'yyyy-MM-dd'))
+                            {
+                                markerStyle={backgroundColor: '#bbf3be'}
+                            } else {
+                                markerStyle={backgroundColor: '#00000000'} //완전 투명함(색없음)
+                            }
 
                             //해당 상태들에 대한 값
                             const isCurrentMonth = (getMonth(day) === getMonth(pointDate));
@@ -128,18 +137,17 @@ function renderCalendar(pointDate: Date,
                                     {
                                         //선택한 날짜인 경우(전역적으로 관리 중인 markedDate인 경우) 마커를 표시하고, 아니면 그냥 text만 표시
                                         //day와 markedDate를 직접적으로 비교하게 되면, 시간에서 미세하게 차이가 발생하므로, 아래와 같이 비교해야 함
-                                        (format(day, 'yyyy-MM-dd') === format(new Date(markedDate), 'yyyy-MM-dd')) ? (
-                                            <View style={styles.calendarMarker}>
-                                                <Text style={[style, {fontSize: 20}]}>{getDate(day)}</Text>
+                                        <View style={{justifyContent: 'center', alignItems: 'center'}}>
+                                            <View style={[styles.calendarMarker, markerStyle]}>
+                                                <Text style={[style, {fontSize: 24}]}>{getDate(day)}</Text>
                                             </View>
-                                        ) : (
-                                            <Text style={[style, {fontSize: 20}]}>{getDate(day)}</Text>
-                                        )
+                                            <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'green'}]}/>
+                                        </View>
                                     }
-                                    
                                 </TouchableOpacity>
                             )
                         }
+
                         )}
                     </View>
                 ))
@@ -150,7 +158,7 @@ function renderCalendar(pointDate: Date,
 
 
 //UI적으로 라이브러리로는 내가 원하는 Calendar를 구현할 수 없으므로,직접 구현할 것이다
-function Calendar(props: any) {
+function Calendar(props: any){
 
     let weekMarking = ["일", "월", "화", "수", "목", "금", "토"]; //요일을 표시하기 위한 데이터
 

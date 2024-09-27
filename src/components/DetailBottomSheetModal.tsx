@@ -4,7 +4,7 @@ import {ScrollView} from 'react-native-gesture-handler'
 import * as Progress from 'react-native-progress';
 
 //'세부 영양성분' 내부에 들어가는 DetailBottomSheetModal 컴포넌트
-function DetailBottomSheetModal(props) {
+function DetailBottomSheetModal(props: any) {
   console.log("DetailBottomSheetModal rendering");
 
   return (

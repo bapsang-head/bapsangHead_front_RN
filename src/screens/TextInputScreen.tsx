@@ -101,7 +101,7 @@ function TextInputScreen({route, navigation, appState}){
                 'Content-Type': 'application/json;charset=UTF-8',
                 'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
             },
-            timeout: 5000, //5초 후 요청이 응답하지 않으면 Timeout
+            timeout: 10000, //5초 후 요청이 응답하지 않으면 Timeout
           })
 
           // 서버 응답에서 data 배열 추출
