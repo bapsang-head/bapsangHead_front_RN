@@ -1,9 +1,11 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Dimensions, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import moment from 'moment';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, runOnJS } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+
 import { styles } from '../styles/styles';
 
 //svg Icon들 import!
@@ -17,13 +19,6 @@ import SlimArrowDownIcon from '../assets/svg/slimArrow_Down.svg'
 import SlimArrowUpIcon from '../assets/svg/slimArrow_Up.svg'
 import WatchDetailsIcon from '../assets/svg/watch_detail.svg'
 import FixDietIcon from '../assets/svg/fix_diet.svg'
-
-import Animated, {
-  useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from "../store";
@@ -45,19 +40,17 @@ import { BottomSheetDefaultBackdropProps } from '@gorhom/bottom-sheet/lib/typesc
 
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 //메인화면 Component
 function MainScreen({route, navigation}) {
 
   const bottomSheetRef = useRef<BottomSheet>(null); // Reference for the bottom sheet
-  const detailBottomSheetRef = useRef(null); //세부 영양성분에 관한 Bottom Sheet Reference
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   let [pointDate, setPointDate] = useState(new Date()); 
   let [isCalendarOpened, setIsCalendarOpened] = useState(false); //Calendar의 visibility를 관리한다
-
-
-  let [isSectionFolded, setIsSectionFolded] = useState([true, true, true]); //아침,점심,저녁 식사를 표시한 section을 접었다 폈다 하는 state
   
   let [loadedDietData, setLoadedDietData] = useState(null);
 
@@ -88,22 +81,6 @@ function MainScreen({route, navigation}) {
   };
 
 
-  //section을 접고, 피고, 할 수 있도록 하는 함수
-  //배열로 된 state는 상태를 변경할 때, 아래와 같은 형태를 따라야 한다
-  function handleSectionFoldedState(index: Number) {
-    const sectionFolded = isSectionFolded.map((a, i) => {
-      if (i === index) {
-        //해당하는 곳은 boolean 값을 반전시킨다
-        return !a;
-      } else {
-        //변경할 필요가 없는 나머지는 반환한다.
-        return a;
-      }
-    });
-    setIsSectionFolded(sectionFolded);
-  }
-
-
   //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다 (의존성 배열로 isCalendarOpened, markedDate를 집어 넣는다)
   let toggleCalendar = useCallback(() => {
 
@@ -114,38 +91,64 @@ function MainScreen({route, navigation}) {
     setIsCalendarOpened(!isCalendarOpened);
   }, [isCalendarOpened, markedDate]);
 
-  //'세부 영양성분' 내용을 담은 Bottom Sheet를 보여주는 함수 showDetailBottomSheet
-  const showDetailBottomSheet = useCallback(() => {
-    setIsDetailModalOpen(true);
-    navigation.setOptions({tabBarStyle: {display: 'none'}});
-    bottomSheetRef.current.close();
-    detailBottomSheetRef.current.snapToIndex(0);
-  }, [navigation]);
+  //'세부 영양성분' BottomSheet 관련 코드
+  const translateY = useSharedValue(SCREEN_HEIGHT); //최초의 BottomSheet 위치 (off-screen)
+  const startY = useSharedValue(0);  // Shared value to store the starting Y position
+  const maxDragUpPosition = 0;  // Maximum position to prevent dragging above this point (change as per your requirement)
+  const [detailBS_IsVisible, setDetailBS_IsVisible] = useState(false);
 
-  //Sheet의 변화를 감지하는 handleSheetChanges(gorhom/bottom-sheet 라이브러리는 인덱스로 -1 값이 들어올 경우, bottomsheet가 닫혔다는 뜻이다)
-  const handleSheetChanges = useCallback((index: number) => {
-    if(index === -1) //bottom sheet가 닫혔을 때
-    {
-      setIsDetailModalOpen(false);
-      navigation.setOptions({ tabBarStyle: {display: 'flex'}});
-      bottomSheetRef.current.snapToIndex(0); //기존의 bottom sheet 다시 표시
-    } 
+  //Detail BottomSheet에 대한 Animated Style
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  //BackDrop에 대한 Animated Style
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateY.value, [0, SCREEN_HEIGHT], [0.7, 0]),
+  }));
+
+  const openBottomSheet = () => {
+    'worklet'; //해당 함수가 worklet으로 취급되도록 한다
+    translateY.value = withTiming(50, {duration: 500});
+  }
+
+  const closeBottomSheet = () => {
+    'worklet'; //해당 함수가 worklet으로 취급되도록 한다
+    translateY.value = withTiming(SCREEN_HEIGHT, {duration: 500});
     
-  }, [navigation]);
+    //State 업데이트는 "JS Thread"에서 업데이트 되도록 보장해 주어야 한다
+    runOnJS(setDetailBS_IsVisible)(false); //Inline 함수들을 사용하지 말도록 하자
+  }
 
-  //커스텀 backdrop component
-  const renderBackDrop = useCallback(
-    (props) => (
-      <BottomSheetBackdrop
-        {...props}
-        opacity={0.5} //투명도 설정
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'gray'}}
-      />
-    ),
-    []
-  );
+  //DetailBottomSheet를 띄우는 버튼을 클릭했을 때의 동작
+  const toggleBottomSheet = () => {
+    if(detailBS_IsVisible) {
+      closeBottomSheet(); 
+    } else {
+      runOnJS(setDetailBS_IsVisible)(true); //Inline 함수들을 사용하지 말도록 하자
+      openBottomSheet();
+    }
+  };
+
+  //BottomSheet를 Dragging 하는 것에 대한 Gesture Handler
+  const panGesture = Gesture.Pan()
+    .onBegin(() => {
+      //Gesture를 시작할 때 현재 translateY 값을 저장한다
+      startY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      // Update translateY but clamp it so it cannot go higher than 'maxDragUpPosition'
+      translateY.value = Math.max(startY.value + event.translationY, maxDragUpPosition);  // Prevent upward dragging beyond 'maxDragUpPosition'
+    })
+    .onEnd((event) => {
+      // Determine whether to close or open the BottomSheet based on the drag distance
+      if (event.translationY > 100) {
+        closeBottomSheet();
+      } else {
+        openBottomSheet();
+      }
+    });
+  
 
   //year, month (기준이 되는 pointDate 기준으로 렌더링)
   let year = getYear(pointDate);
@@ -188,13 +191,14 @@ function MainScreen({route, navigation}) {
           />
 
           {/* 스크롤 뷰 안에는 아침,점심,저녁 식단 입력을 확인할 수 있는 창들이 나올 것임 */}
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <MainScreenSection eatingTime={'아침 식사'} navigation={navigation}/>
-            <MainScreenSection eatingTime={'점심 식사'} navigation={navigation}/>
-            <MainScreenSection eatingTime={'저녁 식사'} navigation={navigation}/>
+          <ScrollView showsVerticalScrollIndicator={false} style={{marginBottom: 64}}>
+            <MainScreenSection eatingTime={'아침 식사'} navigation={navigation} toggleBottomSheet={toggleBottomSheet} markedDate={markedDate}/>
+            <MainScreenSection eatingTime={'점심 식사'} navigation={navigation} toggleBottomSheet={toggleBottomSheet} markedDate={markedDate}/>
+            <MainScreenSection eatingTime={'저녁 식사'} navigation={navigation} toggleBottomSheet={toggleBottomSheet} markedDate={markedDate}/>
           </ScrollView>
         </View>
 
+        {/* 나의 일일 칼로리 섭취 현황 확인하기 */}
         <BottomSheet 
           ref={bottomSheetRef} 
           index={0} //초기 index를 명확히 설정
@@ -207,18 +211,26 @@ function MainScreen({route, navigation}) {
           </View>
         </BottomSheet>
 
-        <BottomSheet
-          ref={detailBottomSheetRef}
-          index={-1} //초기 index를 명확히 설정
-          snapPoints={['60%']}
-          enablePanDownToClose={true} //스크롤로 닫을 수 있도록 설정
-          onChange={handleSheetChanges} //인덱스 변화 감지
-          backdropComponent={renderBackDrop} //Custom Backdrop 적용
-          >
-          <View>
-            <DetailBottomSheetModal onClose={false}/>
-          </View>
-        </BottomSheet>
+        {/*세부영양성분 BottomSheet 나올 때의 BackDrop UI*/}
+        {
+          detailBS_IsVisible && (
+            <TouchableWithoutFeedback onPress={closeBottomSheet}>
+              <Animated.View style={[MainStyles.backdrop, backdropStyle]} />
+            </TouchableWithoutFeedback>
+          )
+        }
+
+        {/* 세부 영양정보 관련 BottomSheet */}
+        <Animated.View style={[MainStyles.bottomSheet, animatedStyle]}>
+          {/* 드래그가 가능한 부분(상단 부분)을 설정한다 */}
+          <GestureDetector gesture={panGesture}>
+            <View style={MainStyles.draggableArea}>
+              <Text style={MainStyles.dragText}>Drag Area</Text>
+            </View>
+          </GestureDetector>
+          <DetailBottomSheetModal/>
+        </Animated.View>
+
       </>
       )
     }
@@ -233,9 +245,6 @@ const MainStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  parent: {
-    width: 200,
   },
   wrapper: {
     width: '100%',
@@ -255,6 +264,47 @@ const MainStyles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'black',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: SCREEN_HEIGHT * 0.5,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 5,
+  },
+  sheetContent: {
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  toggleButton: {
+    padding: 10,
+    backgroundColor: 'lightgrey',
+    alignItems: 'center',
+    margin: 20,
+  },
+  draggableArea: {
+    height: 40,  // Only the top 40px is draggable
+    backgroundColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  dragText: {
+    fontWeight: 'bold',
+    color: '#333',
   },
 });
 

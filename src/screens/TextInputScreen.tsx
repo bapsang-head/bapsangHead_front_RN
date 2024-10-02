@@ -193,12 +193,14 @@ function TextInputScreen({route, navigation, appState}){
             </View>
             <View>
                 <TextInput
-                    style={[styles.textInputStyle, {marginTop: 24}]}
+                    style={[styles.textInputStyle, {marginTop: 24, width: '100%'}]}
                     onChangeText={handleInputChange}
                     value={inputText}
                     placeholder="예시) 삼겹살 2근, 콜라 1캔 먹었어."
                     placeholderTextColor={'#a8a8a8'}
-                    editable={inputTextAvailable}/>
+                    editable={inputTextAvailable}
+                    multiline={false}
+                    textBreakStrategy="simple"/>
             </View>
             {
               //subComponent는 아래의 함수에서 조건에 맞게 수행될 것이다

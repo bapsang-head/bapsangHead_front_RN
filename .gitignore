@@ -40,3 +40,6 @@ ios/
 
 #for security(AppKey etc..)
 .env
+
+#workspace file exception
+gichul_workspace.code-workspace

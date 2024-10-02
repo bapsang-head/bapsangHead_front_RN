@@ -270,9 +270,9 @@ function Calendar(props: any){
                     )}
 
                     //렌더링 성능 최적화를 위한 props (initialNumToRender, maxToRenderPerBatch, windowSize)
-                    initialNumToRender={5}
-                    maxToRenderPerBatch={5}
-                    windowSize={5} // 현재 화면 크기의 5배에 해당하는 항목을 렌더링
+                    initialNumToRender={3}
+                    maxToRenderPerBatch={3}
+                    windowSize={3} // 현재 화면 크기의 3배에 해당하는 항목을 렌더링
                     />
             </View>
         </View>

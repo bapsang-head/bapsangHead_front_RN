@@ -82,6 +82,7 @@ function DetailBottomSheetModal(props: any) {
 const styles = StyleSheet.create({
     modalContainer: {
         marginHorizontal: 20,
+        marginBottom: 60,
         backgroundColor: '#fff',
     },
     detailContainer: {

@@ -66,7 +66,7 @@ function FixingInput(props) {
         const newData = [...data];
 
         //빈 데이터들로 구성되어 있는 배열 하나 newData에 push
-        newData.push({'food': '', 'quantity': '', 'unit': ''}); 
+        newData.push({'food': '', 'quantity': 0, 'unit': ''}); 
         setData(newData);
     }
 
@@ -93,21 +93,26 @@ function FixingInput(props) {
                         onChangeText={(text) => updateDataElement(i, 'food', text)} //첫 번째 요소(음식명)을 업데이트
                         value={ele.food}
                         placeholder="음식명"
-                        placeholderTextColor={'#a8a8a8'}/>
+                        placeholderTextColor={'#a8a8a8'}
+                        multiline={false}
+                        textBreakStrategy="simple"/>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.2, marginHorizontal: 4, height: 36}]}
                         onChangeText={(text) => updateDataElement(i, 'quantity', text)} //두 번째 요소(수량)을 업데이트
-                        value={ele.quantity}
-                        placeholder="숫자"
+                        value={String(ele.quantity)} //quantity는 서버로부터 number로 날라오니까, String으로 변환해야 TextInput에 잘 표시된다
+                        placeholder='숫자'
                         placeholderTextColor={'#a8a8a8'}
                         keyboardType="numeric"  // 숫자 키보드만 팝업되도록 설정
-                        />
+                        multiline={false}
+                        textBreakStrategy="simple"/>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.1, marginLeft: 4, height: 36}]}
                         onChangeText={(text) => updateDataElement(i, 'unit', text)} //세 번째 요소(단위)를 업데이트
                         value={ele.unit}
                         placeholder="단위"
-                        placeholderTextColor={'#a8a8a8'}/>
+                        placeholderTextColor={'#a8a8a8'}
+                        multiline={false}
+                        textBreakStrategy="simple"/>
                 </View>
             );
         });
