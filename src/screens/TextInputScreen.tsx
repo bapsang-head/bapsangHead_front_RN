@@ -25,6 +25,8 @@ function TextInputScreen({route, navigation, appState}){
     //서버로부터 1차적으로 분석한 결과를 저장하는 state (추후 연동할 것임)
     let [analysisResult_First, setAnalysisResult_First] = useState([]);
 
+    const abortControllerRef = useRef(null); // AbortController를 useRef로 관리
+
     const updateStates = (direction: String) => {
       //'완료' 버튼을 누른 경우
       if(direction === 'forward') {
@@ -37,26 +39,24 @@ function TextInputScreen({route, navigation, appState}){
       //'뒤로가기' 버튼을 누른 경우
       } else if(direction === 'backward') {
         //각 상황에 맞게 state를 업데이트 해주어야 한다
-        if(subComponentPageNum === 2) {
-          setInputTextAvailable(true);
-          setSubComponentPageNum(prevPageNum => prevPageNum - 2); //subComponentPage 번호를 -2 해준다
-        } else if(subComponentPageNum === 4) {
-          setSubComponentPageNum(prevPageNum => prevPageNum - 2);
-        } else if(subComponentPageNum === 1) {
-          setInputTextAvailable(true);
-          setSubComponentPageNum(prevPageNum => prevPageNum - 1); //subComponentPage 번호를 -2 해준다
-        } else if(subComponentPageNum === 3) {
-          setSubComponentPageNum(prevPageNum => prevPageNum - 1); //subComponentPage 번호를 -2 해준다
+        if(subComponentPageNum === 2 || subComponentPageNum === 1) {
+          setInputTextAvailable(true); //첫번째 분석 구간에서 빽도했을 경우엔 텍스트 입력하는 곳을 활성화 해주어야 한다'
         }
+        //subComponentPageNum을 2로 나누었을 때 나머지가 0이면 2를 빼주고, 1이면 1을 빼준다
+        setSubComponentPageNum(prevPageNum => prevPageNum - ((subComponentPageNum % 2 === 0) ? 2 : 1));
+
       }
     }
 
+    //숫자에 따라 컴포넌트를 렌더링 하는 것을 컨트롤하는 renderSubComponent
     const renderSubComponent = () => {
       switch(subComponentPageNum) {
         case 0:
           return null;
         case 1:
-          return <LoadingComponent comment="입력내용 분석중입니다" userInputAnalysis_First={userInputAnalysis_First}/>;
+          return <LoadingComponent comment="입력내용 분석중입니다" 
+                  userInputAnalysis_First={userInputAnalysis_First}
+                  abortControllerRef={abortControllerRef}/>;
         case 2:
           return (
             <View style={{marginTop: 24}}>
@@ -81,7 +81,7 @@ function TextInputScreen({route, navigation, appState}){
     const nav = useNavigation(); //네비게이션 사용을 위해 useNavigation() 가져오기
 
     //사용자가 입력한 문장 1차 분석 (재시도 요청에 사용될 변수 retryCount)
-    async function userInputAnalysis_First(retryCount = 0) {
+    async function userInputAnalysis_First(retryCount = 0, controller) {
       console.log('사용자가 입력한 문장: ', inputText);
 
 
@@ -101,7 +101,8 @@ function TextInputScreen({route, navigation, appState}){
                 'Content-Type': 'application/json;charset=UTF-8',
                 'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
             },
-            timeout: 10000, //5초 후 요청이 응답하지 않으면 Timeout
+            timeout: 10000, //10초 후 요청이 응답하지 않으면 Timeout
+            signal: controller.signal, //AbortController의 signal 전달
           })
 
           // 서버 응답에서 data 배열 추출
@@ -114,16 +115,19 @@ function TextInputScreen({route, navigation, appState}){
         }
 
       } catch(error) {
-
+        //요청이 취소된 경우(뒤로 가기 버튼 같은 거 눌렀을 때
+        if(axios.isCancel(error)) {
+          console.warn('요청이 취소되었습니다: ', error.message);
+        }
         //error code가 timeout과 관련한 경우이면..
-        if(error.code === 'ECONNABORTED') {
+        else if(error.code === 'ECONNABORTED') {
           console.warn('5초가 지났습니다. 재시도 중...', retryCount + 1);
 
-          //재시도 횟수를 제한할 수 있다. 여기서는 우선 5번으로 제한함
-          if(retryCount < 5) {
+          //재시도 횟수를 제한할 수 있다. 여기서는 우선 6번으로 제한함
+          if(retryCount < 6) {
             return new Promise((resolve) => {
               setTimeout(() => {
-                resolve(userInputAnalysis_First(retryCount + 1));
+                resolve(userInputAnalysis_First(retryCount + 1, controller));
               }, 1000); //1초 후에 재시도 (재귀적으로 userInputAnalysis() 함수 수행)
             })
           } else {
@@ -137,10 +141,9 @@ function TextInputScreen({route, navigation, appState}){
 
     //완료 버튼을 눌렀을 때의 동작 수행
     const handleDonePress = () => {
-      setTimeout(()=>{
-        console.log('시간 2초 흘러갑니다');
-        updateStates('forward');
-      }, 2000);
+      //'완료' 버튼을 눌렀을 경우에만 axios 요청을 실시한다
+      abortControllerRef.current = new AbortController(); //새로운 AbortController 생성
+      updateStates('forward');
     }
 
     //useLayoutEffect()를 통해서 header 설정을 TextInputScreen 내부에서 수행한다
@@ -159,6 +162,9 @@ function TextInputScreen({route, navigation, appState}){
               {
                 nav.goBack();
               } else { //그렇지 않은 경우
+                if(abortControllerRef.current) {
+                  abortControllerRef.current.abort(); //뒤로 가기 시 요청 취소
+                }
                 updateStates('backward');
               }
             }}>

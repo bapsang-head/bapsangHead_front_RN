@@ -60,8 +60,7 @@ function MyPageScreen({route, navigation}) {
     console.log("MyPage rendering");
     console.log('accountInfo: ', accountInfo);
 
-    let [isLogOut, setIsLogOut] = useState(false); //로그아웃이 되었는지 확인한다
-    let [logOutString, setLogOutString] = useState(null); 
+    let logOutString = null; //logOut 후에 서버로부터 받아오는 정보(string)
 
     //카카오 로그아웃 수행을 위한 함수
     async function kakaoLogOut() {
