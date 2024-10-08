@@ -7,8 +7,6 @@ import moment from 'moment';
 import { styles } from '../styles/styles';
 
 //svg Icon들 import!
-import ArrowUpIcon from '../assets/svg/arrow_drop_up.svg'
-import ArrowDownIcon from '../assets/svg/arrow_drop_down.svg'
 import MorningIcon from '../assets/svg/morning.svg'
 import LunchIcon from '../assets/svg/lunch.svg'
 import DinnerIcon from '../assets/svg/dinner.svg'
@@ -86,22 +84,19 @@ async function fetchMealInfo(eatingTime: string, formattedDate: string) {
 function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDate}) {
 
     let [isSectionFolded, setIsSectionFolded] = useState(true); //section을 접었다 폈다 하는 state
-    let [isMealInfoLoaded, setIsMealInfoLoaded] = useState(false); //음식 정보가 불려왔는지 확인하는 state
-    let serverResponse;
+    let [serverResponse, setServerResponse] = useState(null);
 
     //section을 toggle할 때 사용하는 함수
     async function toggleSection(eatingTime: string, markedDate: string) {
       const parsedDate = parseISO(markedDate);
       const formattedDate = format(parsedDate, 'yyyy-MM-dd');  // 원하는 형식으로 변환
       if(isSectionFolded) { 
-        serverResponse = await fetchMealInfo(eatingTime, formattedDate) //section을 펼칠 땐 식단 정보를 가져와야 한다 (awiat 키워드를 활용해 비동기 함수가 끝난 후 데이터가 출력하도록 코드를 수정해야 함)
+        let response = await fetchMealInfo(eatingTime, formattedDate) //section을 펼칠 땐 식단 정보를 가져와야 한다 (awiat 키워드를 활용해 비동기 함수가 끝난 후 데이터가 출력하도록 코드를 수정해야 함)
 
-        console.log('식단 정보 불러온 결과(serverResponse): ', serverResponse);
+        console.log('formattedDate: ', formattedDate);
 
-        if(serverResponse !== null) //서버로부터 받아온 응답이 빈 배열이 아니라면
-        {
-          setIsMealInfoLoaded(true); //음식 정보 불려 왔다고 말해준다
-        }
+        setServerResponse(response);
+
         setIsSectionFolded(!isSectionFolded);
       } else {
         setIsSectionFolded(!isSectionFolded);
@@ -109,15 +104,16 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
     } 
 
     function returnMealInfo() {
-      if(isMealInfoLoaded) { //식단 정보가 불려와 졌으면
+      if(serverResponse !== null) { //식단 정보가 불려와 졌으면
         return (
           <>
           {/* 식단 정보 출력 */}
-          {/* {serverResponse.map((item, index) => (
+          {serverResponse.map((item, index) => (
             <View key={index}>
               <Text style={{marginVertical: 4, marginLeft: 12}}>{item.name} {item.count}{item.unit}</Text>
             </View>
-          ))} */}
+          ))}
+
           {/* 수정하기와 세부 영양성분 버튼 */}
           <View style={styles.section_container_horizontal}>
             <TouchableOpacity onPress={moveToFixTextInputScreen} style={{flex: 3}}>
@@ -137,7 +133,7 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
           </>
           
         )
-      } else {
+      } else { //식단 정보가 불려져 오지 않았다면
         return (
           <>
           <View style={styles.section_contents}>
@@ -156,11 +152,17 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
 
     //navigation 이동 관련 함수 moveToTextInputScreen, moveToFixTextInputScreen
     function moveToTextInputScreen() {
-        navigation.navigate('TextInputScreen');
+        navigation.navigate('TextInputScreen', {
+          eatingTime: eatingTime, //eatingTime 관련한 정보를 넘겨준다
+          markedDate: markedDate
+        });
     }
 
     function moveToFixTextInputScreen() {
-        navigation.navigate('FixTextInputScreen');
+        navigation.navigate('FixTextInputScreen', {
+          eatingTime: eatingTime, //eatingTime 관련한 정보를 넘겨준다
+          markedDate: markedDate
+        });
     }
 
     return (

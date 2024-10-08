@@ -12,47 +12,48 @@ import RemoveIcon from '../assets/svg/remove.svg'
 function FixingInput(props) {
 
     //props로 넘어온 1차 분석 결과를 data의 초기 값으로 설정한다
-    let [data, setData] = useState(props.analysisResult_First);
+    let [data, setData] = useState(props.analysisResult);
 
-    //식단 정보를 최종적으로 내부 저장소에 저장하는 saveDietData 함수
-    const saveDietData = async (date, dietData) => {
-        try {
-            //AsyncStorage는 단순한 문자열 데이터를 저장
-            //객체를 저장하기 위해선 JSON 형식으로 serialize(직렬화)하고, 데이터를 가져올 때는 다시 parse(파싱)해야 함
-            const jsonValue = JSON.stringify(dietData);
-            await AsyncStorage.setItem(`diet_${date}`, jsonValue);
-            console.log(`AsyncStorage에 ${date} 일자에 대해 식단 Data가 정상적으로 저장되었습니다.`)
-        } catch (e) {
-            console.error('AsyncStorage에 식단 Data를 저장하는 데에 실패했습니다.')
+    //상위 컴포넌트(TextInputScreen)에서 '완료' 버튼이 눌렸을 때만 상위 컴포넌트의 analysisResult를 업데이트 (의존성 배열 확인)
+    useEffect(() => {
+        //'완료' 버튼이 눌렸다는 signal이 상위 컴포넌트로부터 true로 받아 왔을 경우
+        if(props.isFixingCompleted)
+        {
+            props.setAnalysisResult(data); //상위 컴포넌트의 analysisResult 값을 data로 업데이트
         }
-    }
+    }, [props.isFixingCompleted, data, props.setAnalysisResult])
+    
 
-    //AsyncStorage에 저장된 식단 정보를 불러오는 함수
-    const loadDietData = async (date) => {
-        try {
-        const jsonValue = await AsyncStorage.getItem(`diet_${date}`);
-        return jsonValue != null ? JSON.parse(jsonValue) : null; //불러온 정보가 null이 아니면, parsing하여 돌려주고, 아니면 null을 돌려준다.
-        } catch (e) {
-        console.error('AsyncStorage로부터 식단 Data를 불러오는 데 실패했습니다.');
-        }
-    };
+    //'완료' 버튼 활성화 여부 checking하는 함수 (data라는 값의 type을 명시적으로 표시함)
+    function checkFixingInputState(data: {food: string, unit: string, quantity: string}[]) {
+        //유효하지 않은 입력이 있는지 확인한다
+        for(let i = 0; i < data.length; i++) {
+            const item = data[i];
 
-    //AsyncStorage에 저장된 식단 정보를 업데이트 하는 updateDietData 함수 (영양정보 분석을 해야 하므로, 추후 axios 요청이 필요할 것임)
-    const updateDietData = async (date, updatedMealData, updatedMealTime) => {
-        try {
-            let existingData = await loadDietData(date);
-            if(existingData) {
-                //updatedMealTime은 아침(morning), 점심(lunch), 저녁(dinner) 중 해당하는 하나의 값이 넘어올 것임
-                existingData.updatedMealTime = updatedMealData;
-                await saveDietData(date, existingData);
-                console.log(`${updatedMealTime}의 식단 업데이트가 완료되었습니다!`);
-            } else {
-                console.log('업데이트할 데이터가 저장소에 존재하지 않습니다.');
+            //string 타입의 'food'와 'unit'이 null 또는 빈 string인지 체크
+            if(!item.food || !item.unit) {
+                return false; //유효하지 않은 입력이 있을 경우 false 반환
             }
-        } catch (e) {
-            console.error('Data를 업데이트 하는데에 실패했습니다');
+
+            //'quantity'가 0 또는 null인지 체크(TextInput의 특성 때문에 우선 string으로 처리한다)
+            if(item.quantity === '0' || !item.quantity) {
+                return false; //quantity가 0이면 false 반환
+            }
         }
+
+        //모든 입력을 확인했을 때 유효하면 true 반환
+        return true;
     }
+
+    //data가 변할 시에만 checkFixingInputState 함수를 호출해서 '완료' 버튼 활성화 여부 checking, 이에 대한 결과로 값 설정
+    useEffect(() => {
+        const checkValue = checkFixingInputState(data);
+        //checkFixingInputState가 동일한 값을 반환하면 state 변경을 하지 않도록 해서 불필요한 렌더링 방지
+        if(checkValue !== props.completeBtnAvailable)
+        {
+            props.setCompleteBtnAvailable(checkFixingInputState(data));
+        }
+    }, [data]);
 
     //사용자가 data를 수정 시 업데이트하기 위한 updateDataElement 함수
     const updateDataElement = (index, option: keyof typeof data[0], value) => {
@@ -98,7 +99,7 @@ function FixingInput(props) {
                         textBreakStrategy="simple"/>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.2, marginHorizontal: 4, height: 36}]}
-                        onChangeText={(text) => updateDataElement(i, 'quantity', text)} //두 번째 요소(수량)을 업데이트
+                        onChangeText={(text) => updateDataElement(i, 'quantity', parseInt(text) || 0) } //두 번째 요소(수량)을 업데이트
                         value={String(ele.quantity)} //quantity는 서버로부터 number로 날라오니까, String으로 변환해야 TextInput에 잘 표시된다
                         placeholder='숫자'
                         placeholderTextColor={'#a8a8a8'}
