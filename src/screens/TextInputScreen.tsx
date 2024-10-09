@@ -196,9 +196,20 @@ function TextInputScreen(){
       //요청이 취소된 경우(뒤로 가기 버튼 같은 거 눌렀을 때
       if(axios.isCancel(error)) {
         console.warn('요청이 취소되었습니다: ', error.message);
-      }
+      } else if (error.message === 'Network Error') { //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
+        console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
+        // 네트워크 오류 발생 시 재시도
+        if (retryCount < 5) {
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(userInputAnalysis_First(retryCount + 1, controller));
+            }, 2000); // 2초 후에 재시도
+          });
+        } else {
+          console.error('네트워크 오류로 인해 재시도 횟수를 초과했습니다.');
+        }
       //error code가 timeout과 관련한 경우이면..
-      else if(error.code === 'ECONNABORTED') {
+      } else if(error.code === 'ECONNABORTED') {
         console.warn('10초가 지났습니다. 재시도 중...', retryCount + 1);
 
         //재시도 횟수를 제한할 수 있다. 여기서는 우선 5번으로 제한함
@@ -227,37 +238,69 @@ function TextInputScreen(){
     console.log('만든 request body의 date: ', requestBody.date);
     console.log('만든 request body의 mealType: ', requestBody.mealType);
 
-    //먼저 음식 정보를 업로드 해야 한다
-    try {
-      const accessToken = await AsyncStorage.getItem('accessToken'); //AsyncStorage에 있는 accessToken 가져온다 (이게 만료되면 추후 RefreshToken으로 accessToken 재발급 필요할 수도)
-      const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/information` //post 요청에 사용할 url
-      
+    const accessToken = await AsyncStorage.getItem('accessToken'); // AsyncStorage에서 accessToken 가져오기
+    const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/information`;
 
-      if(accessToken) {
-        // 1. 음식 정보를 업로드 (POST)
+    // 음식 정보를 업로드 하는 부분 (POST)
+    try {
+      if (accessToken) {
         const response = await axios.post(url, requestBody, {
           headers: {
               'Content-Type': 'application/json;charset=UTF-8',
-              'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
+              'Authorization': `Bearer ${accessToken}`,
           },
-          timeout: 5000, //5초 후 요청이 응답하지 않으면 Timeout
-          signal: controller.signal, //AbortController의 signal 전달
-        })
+          timeout: 5000,
+          signal: controller.signal,
+        });
 
-        //response 상태를 확인한다
-        if(response.status === 200) {
-          console.log('사용자 식단 정보를 성공적으로 저장했습니다! ');
+        if (response.status === 200) { //성공적으로 식단 정보를 업로드 했을 경우
+          console.log('사용자 식단 정보를 성공적으로 저장했습니다!');
         } else {
           console.log('응답이 성공적이지 않습니다: ', response.status);
         }
       }
 
-      // 2. 음식 정보를 조회 (GET)
-      console.log('식단 영양 정보를 불러오는 중입니다');
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        console.warn('요청이 취소되었습니다: ', error.message);
 
+      //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
+      } else if (error.message === 'Network Error') { 
+        console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
+        // 네트워크 오류 발생 시 재시도
+        if (retryCount < 5) {
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(userInputAnalysis_First(retryCount + 1, controller));
+            }, 1000); // 1초 후에 재시도
+          });
+        } else {
+          console.error('네트워크 오류로 인해 재시도 횟수를 초과했습니다.');
+        }
+      
+      //요청이 5초 이상 걸리는 경우에도 재시도를 해야 한다
+      } else if (error.code === 'ECONNABORTED') {
+        console.warn('5초가 지났습니다. 재시도 중...', retryCount + 1);
+        if (retryCount < 8) {
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(userInputAnalysis_Second(retryCount + 1, controller));
+            }, 1000);
+          });
+        } else {
+          console.error('재시도 횟수를 초과했습니다.');
+        }
+      } else {
+        console.error('음식 정보 업로드 중 에러 발생: ', error);
+      }
+      return; // POST 요청 중 에러 발생 시 함수 종료
+    }
+
+    // 음식 정보를 조회하는 부분 (GET)
+    try {
+      console.log('식단 영양 정보를 불러오는 중입니다');
       const foodAndUnitArray = extractFoodAndUnit(analysisResult); // 배열 생성
 
-      // 배열의 각 요소로 axios 요청을 보냄
       const promises = foodAndUnitArray.map(({ food, unit }) => {
         return axios
           .get(url, {
@@ -269,47 +312,57 @@ function TextInputScreen(){
               Authorization: `Bearer ${accessToken}`,
             },
             timeout: 5000,
-            signal: controller.signal, // AbortController의 signal 전달
+            signal: controller.signal,
           })
           .then((response) => {
             console.log('응답 받음(그람수 응답): ', response.data.gram);
-            return response.data; // 성공적으로 데이터를 받아온 경우
+            return response.data;
           })
           .catch((error) => {
-            console.error('에러 발생:', error.message); // 에러 처리
-            return null; // 실패 시 null 반환
+            console.error('에러 발생:', error.message);
+            return null;
           });
       });
 
-      // 모든 요청이 완료될 때까지 기다림
       const results = await Promise.all(promises);
       console.log('모든 요청 완료:', results);
 
-      // 다음 단계로 넘어가도록 페이지 번호를 업데이트
-      setSubComponentPageNum((prevNum) => prevNum + 1);
       setCompleteBtnAvailable(true);
+      setSubComponentPageNum((prevNum) => prevNum + 1);
+      
 
-    } catch(error) {
-      //요청이 취소된 경우(뒤로 가기 버튼 같은 거 눌렀을 때
-      if(axios.isCancel(error)) {
+    } catch (error) {
+      if (axios.isCancel(error)) {
         console.warn('요청이 취소되었습니다: ', error.message);
-      }
-      //error code가 timeout과 관련한 경우이면..
-      else if(error.code === 'ECONNABORTED') {
-        console.warn('5초가 지났습니다. 재시도 중...', retryCount + 1);
 
-        //재시도 횟수를 제한할 수 있다. 여기서는 우선 6번으로 제한함
-        if(retryCount < 8) {
+      //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
+      } else if (error.message === 'Network Error') { 
+        console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
+        // 네트워크 오류 발생 시 재시도
+        if (retryCount < 5) {
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(userInputAnalysis_First(retryCount + 1, controller));
+            }, 1000); // 1초 후에 재시도
+          });
+        } else {
+          console.error('네트워크 오류로 인해 재시도 횟수를 초과했습니다.');
+        }
+
+      //요청이 5초 이상 걸리는 경우에도 재시도를 해야 한다
+      } else if (error.code === 'ECONNABORTED') {
+        console.warn('5초가 지났습니다. 재시도 중...', retryCount + 1);
+        if (retryCount < 8) {
           return new Promise((resolve) => {
             setTimeout(() => {
               resolve(userInputAnalysis_Second(retryCount + 1, controller));
-            }, 1000); //1초 후에 재시도 (재귀적으로 userInputAnalysis() 함수 수행)
-          })
+            }, 1000);
+          });
         } else {
           console.error('재시도 횟수를 초과했습니다.');
         }
       } else {
-        console.error('post 요청 중 에러 발생: ', error);
+        console.error('음식 정보 조회 중 에러 발생: ', error);
       }
     }
   }

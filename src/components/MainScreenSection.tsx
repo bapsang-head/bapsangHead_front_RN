@@ -108,18 +108,23 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
         let response = await fetchMealInfo(eatingTime, formattedDate) //section을 펼칠 땐 식단 정보를 가져와야 한다 (await 키워드를 활용해 비동기 함수가 끝난 후 데이터가 출력하도록 코드를 수정해야 함)
 
         console.log('formattedDate: ', formattedDate);
-
-        setSimplifiedData(makeSimpleFoodData(response)); //간단하게 가공한 정보를 simplifiedData 값으로 설정
+        console.log('서버에서 가져온 게 뭔데?: ', response);
+        
+        //response가 null이 아닐 때에만 simplifiedData를 response를 이용해서 만들어 낸다. 
+        if(response !== null)
+        {
+          setSimplifiedData(makeSimpleFoodData(response)); //간단하게 가공한 정보를 simplifiedData 값으로 설정
+        }
+        
+        console.log('simplifiedData 상태: ', simplifiedData);
+        
         setServerResponse(response); //서버에서 불러온 전체 정보도 저장한다
-
-        setIsSectionFolded(!isSectionFolded);
-      } else {
-        setIsSectionFolded(!isSectionFolded);
       }
+      setIsSectionFolded(!isSectionFolded); //section을 접었다 폈다 하는 state 변화 주기
     } 
 
     function returnMealInfo() {
-      if(simplifiedData !== null) { //식단 정보가 불려와 졌으면
+      if(serverResponse !== null) { //식단 정보가 불려와 졌으면
         return (
           <>
           {/* 식단 정보 출력 */}
@@ -167,10 +172,10 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
 
     //navigation 이동 관련 함수 moveToTextInputScreen, moveToFixTextInputScreen
     function moveToTextInputScreen() {
-        navigation.navigate('TextInputScreen', {
-          eatingTime: eatingTime, //eatingTime 관련한 정보를 넘겨준다
-          markedDate: markedDate
-        });
+      navigation.navigate('TextInputScreen', {
+        eatingTime: eatingTime, //eatingTime 관련한 정보를 넘겨준다
+        markedDate: markedDate,
+      });
     }
 
     function moveToFixTextInputScreen() {
