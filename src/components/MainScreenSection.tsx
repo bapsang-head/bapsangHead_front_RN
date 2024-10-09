@@ -2,8 +2,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, SafeAreaView } from 'react-native';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-import moment from 'moment';
 import { styles } from '../styles/styles';
 
 //svg Icon들 import!
@@ -80,22 +78,39 @@ async function fetchMealInfo(eatingTime: string, formattedDate: string) {
   }
 }
 
+//간단한 식단 정보(name, unit, count)만을 포함하는 data로 가공하는 function
+function makeSimpleFoodData(response: any)
+{
+  return response.map(data => ({
+    name: data.name,
+    unit: data.unit,
+    count: data.count
+  }));
+}
+
 //상황에 맞게 Section을 만들어낼 것이다
 function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDate}) {
 
     let [isSectionFolded, setIsSectionFolded] = useState(true); //section을 접었다 폈다 하는 state
-    let [serverResponse, setServerResponse] = useState(null);
+    let [serverResponse, setServerResponse] = useState(null); //서버에서 받아온 response 전체
+    let [simplifiedData, setSimplifiedData] = useState(null); //서버에서 받아온 정보를 가공해서 name, unit, count만을 저장한 state
+
+    //markedDate가 변할 때마다 sectionFolded는 true로 설정되어야 한다. (=선택한 날짜가 바뀔 때마다 카드 섹션은 접혀야 한다.)
+    useEffect(() => {
+      setIsSectionFolded(true);
+    },[markedDate]);
 
     //section을 toggle할 때 사용하는 함수
     async function toggleSection(eatingTime: string, markedDate: string) {
       const parsedDate = parseISO(markedDate);
       const formattedDate = format(parsedDate, 'yyyy-MM-dd');  // 원하는 형식으로 변환
       if(isSectionFolded) { 
-        let response = await fetchMealInfo(eatingTime, formattedDate) //section을 펼칠 땐 식단 정보를 가져와야 한다 (awiat 키워드를 활용해 비동기 함수가 끝난 후 데이터가 출력하도록 코드를 수정해야 함)
+        let response = await fetchMealInfo(eatingTime, formattedDate) //section을 펼칠 땐 식단 정보를 가져와야 한다 (await 키워드를 활용해 비동기 함수가 끝난 후 데이터가 출력하도록 코드를 수정해야 함)
 
         console.log('formattedDate: ', formattedDate);
 
-        setServerResponse(response);
+        setSimplifiedData(makeSimpleFoodData(response)); //간단하게 가공한 정보를 simplifiedData 값으로 설정
+        setServerResponse(response); //서버에서 불러온 전체 정보도 저장한다
 
         setIsSectionFolded(!isSectionFolded);
       } else {
@@ -104,11 +119,11 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
     } 
 
     function returnMealInfo() {
-      if(serverResponse !== null) { //식단 정보가 불려와 졌으면
+      if(simplifiedData !== null) { //식단 정보가 불려와 졌으면
         return (
           <>
           {/* 식단 정보 출력 */}
-          {serverResponse.map((item, index) => (
+          {simplifiedData.map((item, index) => (
             <View key={index}>
               <Text style={{marginVertical: 4, marginLeft: 12}}>{item.name} {item.count}{item.unit}</Text>
             </View>
@@ -161,7 +176,8 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
     function moveToFixTextInputScreen() {
         navigation.navigate('FixTextInputScreen', {
           eatingTime: eatingTime, //eatingTime 관련한 정보를 넘겨준다
-          markedDate: markedDate
+          markedDate: markedDate,
+          simplifiedData: simplifiedData //서버에서 불러온 정보를 토대로 가공한 정보도 넘겨준다
         });
     }
 

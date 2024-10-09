@@ -1,6 +1,6 @@
 import React, {useState, useLayoutEffect, useRef, useEffect} from 'react';
 import {View, Text, TextInput, Button, StyleSheet, TouchableOpacity} from 'react-native';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { NavigationContainer, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -13,8 +13,6 @@ import SaveCompleteComponent from '@components/SaveCompleteComponent'
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
-
-import { useRoute, RouteProp } from '@react-navigation/native'
 
 import { parseISO, format } from 'date-fns';
 
@@ -67,6 +65,7 @@ function makeSecondRequestBody(eatingTime: string,
   return secondAnalysisRequestBody;
 }
 
+//Food(음식) 정보와 Unit(단위) 정보만을 객체로 추출하는 함수
 function extractFoodAndUnit(analysisResult: {food: string, unit: string, quantity: number}[])
 {
   return analysisResult.map(item => ({
@@ -77,6 +76,8 @@ function extractFoodAndUnit(analysisResult: {food: string, unit: string, quantit
 
 //'드신 음식을 입력해 주세요' 화면 (실질적으로 프로젝트의 기술 집약 파트)
 function TextInputScreen(){
+  const nav = useNavigation(); //네비게이션 사용을 위해 useNavigation() 가져오기
+  const abortControllerRef = useRef(null); // AbortController를 useRef로 관리
 
   //route.paramas를 사용해서 navigation 사이에서 파라미터를 받을 것이다 (route 객체의 타입을 명시적으로 정의한다)
   const route = useRoute<RouteProp<RootStackParamList, 'TextInputScreen'>>();
@@ -87,13 +88,11 @@ function TextInputScreen(){
   let [completeBtnAvailable, setCompleteBtnAvailable] = useState(false); //'완료' 버튼을 누를 수 있는 상황인지 확인
   let [subComponentPageNum, setSubComponentPageNum] = useState(0); //화면 하단에 표시되는 Component 페이지 번호 관련 state
 
-  //서버로부터 분석한 결과를 저장하는 state (추후 연동할 것임)
+  //서버로부터 분석한 결과를 저장하는 state
   let [analysisResult, setAnalysisResult] = useState([]);
 
   //사용자가 1차 분석 후 수정을 완료하고 '완료' 버튼을 눌렀는지 여부를 확인하는 state
   let [isFixingCompleted, setIsFixingCompleted] = useState(false);
-
-  const abortControllerRef = useRef(null); // AbortController를 useRef로 관리
 
   const updateStates = (direction: String) => {
     //'완료' 버튼을 누른 경우
@@ -159,8 +158,6 @@ function TextInputScreen(){
     //Text가 비어 있지 않으면 completeBtnAvailable을 true로 설정, 비어 있으면 false
     setCompleteBtnAvailable(text.trim().length > 0);
   }
-
-  const nav = useNavigation(); //네비게이션 사용을 위해 useNavigation() 가져오기
 
   //사용자가 입력한 문장 1차 분석 (재시도 요청에 사용될 변수 retryCount)
   async function userInputAnalysis_First(retryCount = 0, controller) {
@@ -358,19 +355,24 @@ function TextInputScreen(){
         headerShadowVisible: false,
         headerBackVisible: false,
         headerLeft: () => (
-          <TouchableOpacity onPress={() => {
-            if(subComponentPageNum === 0) //subComponent의 맨 첫페이지인 경우
-            {
-              nav.goBack();
-            } else { //그렇지 않은 경우
-              if(abortControllerRef.current) { //axios 요청을 abort 하는 controller가 존재하는 경우(null이 아닌 경우)
-                abortControllerRef.current.abort(); //뒤로 가기 시 요청 취소
+          //수정이 완료된 마지막 페이지(4페이지)에선 뒤로가기 버튼을 없애본다
+          subComponentPageNum === 4 ? (
+            null
+          ) : (
+            <TouchableOpacity onPress={() => {
+              if(subComponentPageNum === 0) //subComponent의 맨 첫페이지인 경우
+              {
+                nav.goBack();
+              } else { //그렇지 않은 경우
+                if(abortControllerRef.current) { //axios 요청을 abort 하는 controller가 존재하는 경우(null이 아닌 경우)
+                  abortControllerRef.current.abort(); //뒤로 가기 시 요청 취소
+                }
+                updateStates('backward');
               }
-              updateStates('backward');
-            }
-          }}>
-            <MaterialCommunityIcons name="chevron-left" size={32} />
-          </TouchableOpacity>
+            }}>
+              <MaterialCommunityIcons name="chevron-left" size={32} />
+            </TouchableOpacity>
+          )
         ),
         headerRight: () => (
           <>

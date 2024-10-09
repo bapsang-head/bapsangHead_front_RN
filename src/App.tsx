@@ -28,16 +28,6 @@ import FixBasicDataScreen from '@screens/FixBasicDataScreen';
 import FixTextInputScreen from '@screens/FixTextInputScreen';
 
 
-
-// Define the type for the navigation stack
-type RootStackParamList = {
-  TabNavigator: undefined;
-  TextInputScreen: undefined;
-  Details: undefined;
-  MyPage: undefined;
-};
-
-
 //Tab으로 오고 갈 수 있는 3가지 화면을 정의한다 (MaterialBottomTabNavigator를 사용)
 let Tab = createBottomTabNavigator();
 

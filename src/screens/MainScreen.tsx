@@ -36,7 +36,6 @@ import Calendar from '@components/Calendar';
 import CalendarFolded from '@components/CalendarFolded';
 import DetailBottomSheetModal from '@components/DetailBottomSheetModal'
 import MainScreenSection from '@components/MainScreenSection';
-import { BottomSheetDefaultBackdropProps } from '@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types';
 
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
@@ -51,8 +50,6 @@ function MainScreen({route, navigation}) {
 
   let [pointDate, setPointDate] = useState(new Date()); 
   let [isCalendarOpened, setIsCalendarOpened] = useState(false); //Calendar의 visibility를 관리한다
-  
-  let [loadedDietData, setLoadedDietData] = useState(null);
 
   //redux에 저장되어 있는 markedDate 정보를 가져온다
   let markedDate = useSelector((state: RootState) => state.markedDate.date);
@@ -62,24 +59,6 @@ function MainScreen({route, navigation}) {
   const updateMarkedDate = (date: string) => {
     dispatch(setMarkedDate(date));
   }
-
-  //식단 정보는 markedDate가 변할 때만 불러오면 된다
-  useEffect(()=>{
-    let imsi = loadDietData(markedDate);
-    setLoadedDietData(imsi);
-  },[markedDate]);
-  
-
-  //AsyncStorage에 저장된 식단 정보를 불러오는 함수
-  const loadDietData = async (date) => {
-    try {
-      const jsonValue = await AsyncStorage.getItem(`diet_${date}`);
-      return jsonValue != null ? JSON.parse(jsonValue) : null; //불러온 정보가 null이 아니면, parsing하여 돌려주고, 아니면 null을 돌려준다.
-    } catch (e) {
-      console.error('AsyncStorage로부터 식단 Data를 불러오는 데 실패했습니다.');
-    }
-  };
-
 
   //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다 (의존성 배열로 isCalendarOpened, markedDate를 집어 넣는다)
   let toggleCalendar = useCallback(() => {
