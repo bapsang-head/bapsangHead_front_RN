@@ -14,6 +14,9 @@ import * as KakaoLogins from "@react-native-seoul/kakao-login";
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
 import { setName, setEmail, setAge, setGender, setActivityLevel, setHeight, setWeight } from "../slices/accountInfoSlice";
+import { setMealInput } from '../slices/mealInputSlice';
+
+import { format, subMonths, addMonths } from 'date-fns'; //날짜 formatting을 위해 date-fns 함수를 사용할 것임
 
 //내부 encrypted-storage와 async-storage에 접근하기 위해 import
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -51,12 +54,46 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
     }
 }
 
+//월별 식단 입력 정보 데이터를 서버로부터 불러와서 redux에 저장하는 함수
+async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
+
+    try {
+        let currentMonth = format(new Date(), 'yyyy-MM'); //현재 날짜를 YYYY-MM 형식으로 formatting
+        let previousMonth = format(subMonths(new Date(), 1), 'yyyy-MM'); //currentMonth 기준 이전 달 값 가져오기
+        let nextMonth = format(addMonths(new Date(), 1), 'yyyy-MM'); //currentMonth 기준 다음 달 값 가져오기
+
+        //요청할 url들을 배열로 묶어서 추후 map 함수를 이용해서 한 번에 처리할 것이다
+        const urls = [
+            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${previousMonth}`,
+            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${currentMonth}`,
+            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${nextMonth}`,
+        ];
+
+        if(accessToken) {
+            //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다 (3번 요청하므로, map 함수 사용)
+            const [prevData, currentData, nextData] = await Promise.all(
+                urls.map(url => axios.get(url, {
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Authorization': `Bearer ${accessToken}`,
+                    }
+                }))
+            );
+
+            // 받아온 데이터를 redux에 각각 저장
+            dispatch(setMealInput({ month: previousMonth, mealData: prevData.data }));
+            dispatch(setMealInput({ month: currentMonth, mealData: currentData.data }));
+            dispatch(setMealInput({ month: nextMonth, mealData: nextData.data }));
+        }
+    } catch (error) {
+        console.error('Meal Input 데이터 불러오는 중 에러 발생: ', error);
+    }
+}
+
 //로그인 화면!
 function LoginScreen({route, navigation})
 {
-    let [isLogin, setIsLogin] = useState(false); //카카오 계정 로그인 여부를 관리하는 state
     let [kakaoLoginResponse, setKakaoLoginResponse] = useState(null); //카카오 로그인을 최초로 하면 여기에 부가 정보들을 받아올 것이다
-    let [profile, setProfile] = useState(null); //카카오 프로필 정보를 관리하는 state
 
     //accountInfo를 초기화하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
@@ -124,6 +161,8 @@ function LoginScreen({route, navigation})
                     if(response.data.isRegistered)
                     {
                         fetchUserProfile(response.data.accessToken, dispatch);
+                        fetchMealInput(response.data.accessToken, dispatch);
+
                         console.log('저장된 계정 정보: ', accountInfo);
                         moveToMainScreen(); //메인 화면으로 간다
                     } else {

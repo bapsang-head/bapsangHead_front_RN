@@ -5,18 +5,54 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import { format, subMonths, addMonths } from 'date-fns'; //날짜 formatting을 위해 date-fns 함수를 사용할 것임
 
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
 import { setHeight, setWeight, setAge, setGender, setActivityLevel, setName, setEmail } from "../slices/accountInfoSlice";
+import { setMealInput } from '../slices/mealInputSlice';
 
+//월별 식단 입력 정보 데이터를 서버로부터 불러와서 redux에 저장하는 함수
+async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
+
+    try {
+        let currentMonth = format(new Date(), 'yyyy-MM'); //현재 날짜를 YYYY-MM 형식으로 formatting
+        let previousMonth = format(subMonths(new Date(), 1), 'yyyy-MM'); //currentMonth 기준 이전 달 값 가져오기
+        let nextMonth = format(addMonths(new Date(), 1), 'yyyy-MM'); //currentMonth 기준 다음 달 값 가져오기
+
+        //요청할 url들을 배열로 묶어서 추후 map 함수를 이용해서 한 번에 처리할 것이다
+        const urls = [
+            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${previousMonth}`,
+            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${currentMonth}`,
+            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${nextMonth}`,
+        ];
+
+        if(accessToken) {
+            //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다 (3번 요청하므로, map 함수 사용)
+            const [prevData, currentData, nextData] = await Promise.all(
+                urls.map(url => axios.get(url, {
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Authorization': `Bearer ${accessToken}`,
+                    }
+                }))
+            );
+
+            // 받아온 데이터를 redux에 각각 저장
+            dispatch(setMealInput({ month: previousMonth, mealData: prevData.data }));
+            dispatch(setMealInput({ month: currentMonth, mealData: currentData.data }));
+            dispatch(setMealInput({ month: nextMonth, mealData: nextData.data }));
+        }
+    } catch (error) {
+        console.error('Meal Input 데이터 불러오는 중 에러 발생: ', error);
+    }
+}
 
 //유저 정보 서버로부터 불러와서 redux에 저장하는 함수
 async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
 
     try {
-
         const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile`; //post 요청에 사용할 url 설정
         if(accessToken) {
             //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다
@@ -45,8 +81,6 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
     }
 }
 
-
-
 //accessToken 유효기간 체킹
 async function checkAccessToken(navigation, dispatch: AppDispatch) {
 
@@ -65,6 +99,7 @@ async function checkAccessToken(navigation, dispatch: AppDispatch) {
             } else {
                 console.log('AccessToken이 유효합니다. 로그인을 진행합니다.');
                 fetchUserProfile(accessToken, dispatch);
+                fetchMealInput(accessToken, dispatch);
                 
                 navigation.replace("TabNavigator"); //로그인을 바로 진행합니다
             }
@@ -103,11 +138,12 @@ async function checkRefreshToken(navigation) {
     }
 }
 
+//SplashScreen
 function SplashScreen() {
     const navigation = useNavigation(); //navigation 기능 사용을 위한 useNavigation() 훅 사용
 
-     //accountInfo를 초기화하기 위한 코드
-     const dispatch: AppDispatch = useDispatch();
+    //accountInfo를 초기화하기 위한 코드
+    const dispatch: AppDispatch = useDispatch();
 
     async function loadResourcesAndNavigate() {
         try {

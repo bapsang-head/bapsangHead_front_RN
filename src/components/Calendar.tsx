@@ -24,6 +24,27 @@ const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
 
+//redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
+function makeMealInputMarking(day: Date, mealDataForDate: any) {
+
+    //해당하는 것에 따라 컴포넌트를 return 한다
+    if (!mealDataForDate) {
+        return null; // mealData가 없는 경우 처리
+    }
+
+    //해당하는 것에 따라 컴포넌트를 return 한다
+    if(mealDataForDate.식단입력여부 === "NONE") {
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'white'}]}/>
+    }
+    else if(mealDataForDate.식단입력여부 === "ENTERING") {
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: '#FFA500'}]}/>
+    }
+    else if(mealDataForDate.식단입력여부 === "COMPLETE") {
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: '#008000'}]}/>
+    }
+
+}
+
 
 //한 달 달력에 들어갈 내용(날짜(Date))들의 배열을 만든다.
 function makeCalendarDays(pointDate: Date) {
@@ -52,7 +73,8 @@ function renderCalendar(pointDate: Date,
     updateMarkedDate: Function, 
     flatListRef: any, 
     pageIndex: number, 
-    prevOffsetX: any) {
+    prevOffsetX: any,
+    mealDataForMonth: any) { //컴포넌트에서 전달한 데이터 사용(mealDataForMonth 또한 마찬가지..)
 
     let calendarDaysList = makeCalendarDays(pointDate);
     let weeks = [];
@@ -127,6 +149,11 @@ function renderCalendar(pointDate: Date,
                                 style={color: "black"};
                             }
 
+                            // 해당 월의 데이터를 조회하여 날짜에 맞는 정보를 추출
+                            const mealDataForDate = mealDataForMonth?.find(
+                                (meal) => meal.date === format(day, 'yyyy-MM-dd')
+                            );
+
                             //결과적으로 화면에 뿌려줄 것이다
                             return (
                                 //각 날짜는 터치가 가능하도록 설계
@@ -141,7 +168,7 @@ function renderCalendar(pointDate: Date,
                                             <View style={[styles.calendarMarker, markerStyle]}>
                                                 <Text style={[style, {fontSize: 24}]}>{getDate(day)}</Text>
                                             </View>
-                                            <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'green'}]}/>
+                                            {makeMealInputMarking(day, mealDataForDate)}{/* mealData 전달 */}
                                         </View>
                                     }
                                 </TouchableOpacity>
@@ -171,6 +198,10 @@ function Calendar(props: any){
 
     //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
+
+    // 현재 달에 대한 mealInput 데이터를 가져옴
+    const pointMonth = format(props.pointDate, 'yyyy-MM');
+    const mealDataForMonth = useSelector((state: RootState) => state.mealInput.data[pointMonth]);
 
     console.log(props.pointDate);
 
@@ -258,7 +289,7 @@ function Calendar(props: any){
                     style={{flex: 0.96}}
                     ref={flatListRef}
                     data={monthDataRef.current}
-                    renderItem={({item, index}) => renderCalendar(item.date, props.setPointDate, markedDate, updateMarkedDate, flatListRef, index, prevOffsetX)}
+                    renderItem={({item, index}) => renderCalendar(item.date, props.setPointDate, markedDate, updateMarkedDate, flatListRef, index, prevOffsetX, mealDataForMonth)}
                     keyExtractor={(item) => item.key} 
                     horizontal
                     pagingEnabled

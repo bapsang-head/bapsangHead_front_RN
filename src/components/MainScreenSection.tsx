@@ -1,5 +1,5 @@
 //Libarary or styles import
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, SafeAreaView } from 'react-native';
 import { styles } from '../styles/styles';
@@ -115,8 +115,6 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
         {
           setSimplifiedData(makeSimpleFoodData(response)); //간단하게 가공한 정보를 simplifiedData 값으로 설정
         }
-        
-        console.log('simplifiedData 상태: ', simplifiedData);
         
         setServerResponse(response); //서버에서 불러온 전체 정보도 저장한다
       }

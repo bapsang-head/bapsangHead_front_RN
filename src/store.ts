@@ -4,6 +4,7 @@
 import { configureStore, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import accountInfoReducer from './slices/accountInfoSlice'
 import markedDateReducer from './slices/markedDateSlice';
+import mealInputReducer from './slices/mealInputSlice';
 
 
 //configureStore 함수는 Redux store를 설정한다.
@@ -11,7 +12,8 @@ import markedDateReducer from './slices/markedDateSlice';
 const store = configureStore({
     reducer: {
         markedDate: markedDateReducer,
-        accountInfo: accountInfoReducer
+        accountInfo: accountInfoReducer,
+        mealInput: mealInputReducer
     }
 });
 
