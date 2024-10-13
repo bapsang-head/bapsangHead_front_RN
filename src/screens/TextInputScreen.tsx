@@ -148,7 +148,7 @@ function TextInputScreen(){
                 userInputAnalysis_Second={userInputAnalysis_Second}
                 abortControllerRef={abortControllerRef}/>;
       case 4:
-        return <SaveCompleteComponent/>
+        return <SaveCompleteComponent setCompleteBtnAvailable={setCompleteBtnAvailable}/>
     } 
   }
 
@@ -271,7 +271,7 @@ function TextInputScreen(){
         if (retryCount < 5) {
           return new Promise((resolve) => {
             setTimeout(() => {
-              resolve(userInputAnalysis_First(retryCount + 1, controller));
+              resolve(userInputAnalysis_Second(retryCount + 1, controller));
             }, 1000); // 1초 후에 재시도
           });
         } else {
@@ -342,7 +342,7 @@ function TextInputScreen(){
         if (retryCount < 5) {
           return new Promise((resolve) => {
             setTimeout(() => {
-              resolve(userInputAnalysis_First(retryCount + 1, controller));
+              resolve(userInputAnalysis_Second(retryCount + 1, controller));
             }, 1000); // 1초 후에 재시도
           });
         } else {

@@ -8,15 +8,15 @@ import {styles} from '../styles/styles';
 
 import RemoveIcon from '../assets/svg/remove.svg'
 
-//1차 분석 후 나오는 UI
-function FixingInput(props) {
+//식단 수정할 때 사용하는 컴포넌트 (식단 정보 입력할 때 수정하는 로직과 약간 다르게 간다 (그러나 거의 비슷))
+function FixingInput_Alone(props) {
 
     //props로 넘어온 1차 분석 결과를 data의 초기 값으로 설정한다
     let [data, setData] = useState(props.analysisResult);
 
-    // console.log('데이타: ', data);
+    console.log('데이타: ', data);
 
-    //상위 컴포넌트(TextInputScreen)에서 '완료' 버튼이 눌렸을 때만 상위 컴포넌트의 analysisResult를 업데이트 (의존성 배열 확인)
+    //상위 컴포넌트(FixTextInputScreen)에서 '완료' 버튼이 눌렸을 때만 상위 컴포넌트의 analysisResult를 업데이트 (의존성 배열 확인)
     useEffect(() => {
         //'완료' 버튼이 눌렸다는 signal이 상위 컴포넌트로부터 true로 받아 왔을 경우
         if(props.isFixingCompleted)
@@ -27,25 +27,25 @@ function FixingInput(props) {
     
 
     //'완료' 버튼 활성화 여부 checking하는 함수 (data라는 값의 type을 명시적으로 표시함)
-    function checkFixingInputState(data: {food: string, unit: string, quantity: string}[]) {
+    function checkFixingInputState(data: {name: string, unit: string, count: string}[]) {
 
         //data의 길이가 0이라면 (빈 배열이라면)
         if(data.length === 0)
         {
             return false;
         }
-
+        
         //유효하지 않은 입력이 있는지 확인한다
         for(let i = 0; i < data.length; i++) {
             const item = data[i];
 
             //string 타입의 'food'와 'unit'이 null 또는 빈 string인지 체크
-            if(!item.food || !item.unit) {
+            if(!item.name || !item.unit) {
                 return false; //유효하지 않은 입력이 있을 경우 false 반환
             }
 
             //'quantity'가 0 또는 null인지 체크(TextInput의 특성 때문에 우선 string으로 처리한다)
-            if(item.quantity === '0' || !item.quantity) {
+            if(item.count === '0' || !item.count) {
                 return false; //quantity가 0이면 false 반환
             }
         }
@@ -64,8 +64,6 @@ function FixingInput(props) {
         }
     }, [data]);
 
-    
-
     //사용자가 data를 수정 시 업데이트하기 위한 updateDataElement 함수
     const updateDataElement = (index, option: keyof typeof data[0], value) => {
         const newData = [...data];
@@ -78,7 +76,7 @@ function FixingInput(props) {
         const newData = [...data];
 
         //빈 데이터들로 구성되어 있는 배열 하나 newData에 push
-        newData.push({'food': '', 'quantity': 0, 'unit': ''}); 
+        newData.push({'name': '', 'count': 0, 'unit': ''}); 
         setData(newData);
     }
 
@@ -102,16 +100,16 @@ function FixingInput(props) {
                     </TouchableOpacity>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.5, marginRight: 4, height: 36}]}
-                        onChangeText={(text) => updateDataElement(i, 'food', text)} //첫 번째 요소(음식명)을 업데이트
-                        value={ele.food}
+                        onChangeText={(text) => updateDataElement(i, 'name', text)} //첫 번째 요소(음식명)을 업데이트
+                        value={ele.name}
                         placeholder="음식명"
                         placeholderTextColor={'#a8a8a8'}
                         multiline={false}
                         textBreakStrategy="simple"/>
                     <TextInput 
                         style={[styles.textInputStyle, {flex: 0.2, marginHorizontal: 4, height: 36}]}
-                        onChangeText={(text) => updateDataElement(i, 'quantity', parseInt(text) || 0) } //두 번째 요소(수량)을 업데이트
-                        value={String(ele.quantity)} //quantity는 서버로부터 number로 날라오니까, String으로 변환해야 TextInput에 잘 표시된다
+                        onChangeText={(text) => updateDataElement(i, 'count', parseInt(text) || 0) } //두 번째 요소(수량)을 업데이트
+                        value={String(ele.count)} //quantity는 서버로부터 number로 날라오니까, String으로 변환해야 TextInput에 잘 표시된다
                         placeholder='숫자'
                         placeholderTextColor={'#a8a8a8'}
                         keyboardType="numeric"  // 숫자 키보드만 팝업되도록 설정
@@ -148,4 +146,4 @@ function FixingInput(props) {
     )
 }
 
-export default FixingInput;
+export default FixingInput_Alone;

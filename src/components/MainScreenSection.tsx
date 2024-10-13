@@ -100,6 +100,13 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
       setIsSectionFolded(true);
     },[markedDate]);
 
+    // simplifiedData가 변경될 때마다 로그를 출력하는 useEffect 추가
+    useEffect(() => {
+      if (simplifiedData) {
+        console.log('간단해진 식단 정보: ', simplifiedData);
+      }
+    }, [simplifiedData]);
+
     //section을 toggle할 때 사용하는 함수
     async function toggleSection(eatingTime: string, markedDate: string) {
       const parsedDate = parseISO(markedDate);
@@ -116,13 +123,13 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
           setSimplifiedData(makeSimpleFoodData(response)); //간단하게 가공한 정보를 simplifiedData 값으로 설정
         }
         
-        setServerResponse(response); //서버에서 불러온 전체 정보도 저장한다
+        setServerResponse(response); //서버에서 불러온 전체 정보도 저장한다 (세부 영양성분 보여줄 때 필요하거든)
       }
       setIsSectionFolded(!isSectionFolded); //section을 접었다 폈다 하는 state 변화 주기
     } 
 
     function returnMealInfo() {
-      if(serverResponse !== null) { //식단 정보가 불려와 졌으면
+      if(simplifiedData !== null) { //식단 정보가 불려와 졌으면
         return (
           <>
           {/* 식단 정보 출력 */}

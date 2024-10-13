@@ -22,6 +22,10 @@ function LoadingComponent(props) {
         {
             props.userInputAnalysis_Second(0, props.abortControllerRef.current);
         }
+        else if(props.comment === '수정한 식단으로 저장중입니다' && props.abortControllerRef.current)
+        {
+            props.userInputAnalysis_inFixInput(0, props.abortControllerRef.current)
+        }
     }, [props.comment])
     
     return (

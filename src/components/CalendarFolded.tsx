@@ -149,7 +149,7 @@ async function fetchMealDataForWeek(
                 console.error('데이터를 가져오는 중 에러 발생: ', error);
             }
         } else {
-            console.log('음식 입력 현황을 redux에서 불러옴!');
+            console.log('음식 입력 현황을 redux에서 불러옴!', format(day, 'yyyy-MM-dd'));
             return mealData[month]?.find((meal) => meal.date === format(day, 'yyyy-MM-dd'));
         }
     });
@@ -177,6 +177,8 @@ function CalendarFolded(props: any) {
 
     console.log(props.pointDate);
 
+    props.pointDate = markedDate; //초기값은 markedDate로 설정해야 함
+
     //markedDate를 업데이트하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
 
@@ -188,31 +190,26 @@ function CalendarFolded(props: any) {
     const weekDataRef = useRef(
         Array.from({ length: MAX_COUNT_OF_WEEKS }, (_, i) => {
             const diff = i - INITIAL_INDEX;
-            return { key: `week-${i}`, date: addWeeks(markedDate, diff) };
+            return { key: `week-${i}`, date: addWeeks(props.pointDate, diff) };
         })
     );
 
     const [mealDataByDate, setMealDataByDate] = useState<any[]>([]);
     const [weekCalendarDays, setWeekCalendarDays] = useState<Date[]>([]);
-    const [isLoading, setIsLoading] = useState(true); // 로딩 상태 추가
 
     // 주간 캘린더 데이터를 불러오는 useEffect
     useEffect(() => {
         //한 주치 날짜를 만들고, 입력 현황을 불러오는 역할을 하는 함수 fetchWeekData
         const fetchWeekData = async () => {
-            setIsLoading(true); // 데이터를 가져오기 전에 로딩 상태로 전환
-            // // 새로운 주차로 넘어가기 전에 mealDataByDate 초기화
-            // setMealDataByDate([]); // 이전 주차의 데이터를 초기화
 
             const days = makeWeekCalendarDays(props.pointDate); //달력에 들어간 주간 달력 날짜들을 만든다(pointDate 기준)
             setWeekCalendarDays(days);
             const mealData = await fetchMealDataForWeek(days, mealInputData, dispatch); //한 주간 관련해서 입력 현황을 불러온다(필요시 서버 요청도 함)
             setMealDataByDate(mealData);
 
-            setIsLoading(false); //데이터를 모두 가져오면 로딩 완료
         };
         fetchWeekData();
-    }, [props.pointDate]);
+    }, [props.pointDate, mealInputData]);
 
     useEffect(() => {
         //initialScrollIndex에 맞는 초기 offsetX를 설정
@@ -284,31 +281,29 @@ function CalendarFolded(props: any) {
                 {/* FlatList를 이용해서 날짜 무한 스크롤을 구현한다, UI 디자인 보기 좋게 하기 위해서.. 'marginTop: 8, height: 44' 옵션 추가.. */}
                 {/* 해당 구역에선 flex로 비율값을 맞추기 보단, 고정적인 dp 값으로 layout 구성이 옳다고 판단 */}
 
-                {/* 로딩 중인 경우 로딩 표시 */}
-                {isLoading ? (
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <Text>Loading...</Text>
-                    </View>
-                ) : (
-                    <FlatList
-                        style={{ marginTop: 8 }}
-                        ref={flatListRef}
-                        data={weekDataRef.current}
-                        renderItem={({ item }) =>
-                            renderWeekCalendar(weekCalendarDays, props.setPointDate, markedDate, updateMarkedDate, mealDataByDate)
-                        }
-                        keyExtractor={(item) => item.key}
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        onMomentumScrollEnd={handleScroll}
-                        initialScrollIndex={INITIAL_INDEX}
-                        getItemLayout={(data, index) => ({ length: contentWidth, offset: contentWidth * index, index })}
-                        initialNumToRender={5}
-                        maxToRenderPerBatch={5}
-                        windowSize={5}
-                    />
-                )}
+                <FlatList
+                    style={{ marginTop: 8 }}
+                    ref={flatListRef}
+                    data={weekDataRef.current}
+                    renderItem={({ item }) =>
+                        renderWeekCalendar(
+                            makeWeekCalendarDays(item.date), //각 주차별 날짜 배열을 생성하여 렌더링
+                            props.setPointDate, 
+                            markedDate, 
+                            updateMarkedDate, 
+                            mealDataByDate)
+                    }
+                    keyExtractor={(item) => item.key}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={handleScroll}
+                    initialScrollIndex={INITIAL_INDEX}
+                    getItemLayout={(data, index) => ({ length: contentWidth, offset: contentWidth * index, index })}
+                    initialNumToRender={5}
+                    maxToRenderPerBatch={5}
+                    windowSize={5}
+                />
             </View>
         </View>
     )
