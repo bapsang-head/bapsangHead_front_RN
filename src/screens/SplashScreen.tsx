@@ -43,6 +43,7 @@ async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
             dispatch(setMealInput({ month: previousMonth, mealData: prevData.data }));
             dispatch(setMealInput({ month: currentMonth, mealData: currentData.data }));
             dispatch(setMealInput({ month: nextMonth, mealData: nextData.data }));
+            console.log(currentMonth, '기준으로 잘 불러옴!');
         }
     } catch (error) {
         console.error('Meal Input 데이터 불러오는 중 에러 발생: ', error);

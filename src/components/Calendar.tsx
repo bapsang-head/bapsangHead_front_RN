@@ -20,6 +20,10 @@ import {
     getDate
     } from 'date-fns'; //달력을 직접 만들기 위한 date-fns 라이브러리 import!
 
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import axios from 'axios'
+import { setMealInput } from '../slices/mealInputSlice'; // mealInputSlice 파일에서 setMealInput 액션 가져오기
+
 const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
@@ -66,7 +70,7 @@ function makeCalendarDays(pointDate: Date) {
     return calendarDays;
 }
 
-//한 달치 Calendar를 렌더링 해주는 함수
+//한 달치 Calendar를 화면에 뿌려주는 함수
 function renderCalendar(pointDate: Date, 
     setPointDate: Function, 
     markedDate: string | null, 
@@ -74,7 +78,8 @@ function renderCalendar(pointDate: Date,
     flatListRef: any, 
     pageIndex: number, 
     prevOffsetX: any,
-    mealDataForMonth: any) { //컴포넌트에서 전달한 데이터 사용(mealDataForMonth 또한 마찬가지..)
+    mealInputForMonth: any, //현재 달 데이터
+    ) { //컴포넌트에서 전달한 데이터 사용(mealInputForMonth 또한 마찬가지..)
 
     let calendarDaysList = makeCalendarDays(pointDate);
     let weeks = [];
@@ -150,7 +155,7 @@ function renderCalendar(pointDate: Date,
                             }
 
                             // 해당 월의 데이터를 조회하여 날짜에 맞는 정보를 추출
-                            const mealDataForDate = mealDataForMonth?.find(
+                            const mealDataForDate = mealInputForMonth?.find(
                                 (meal) => meal.date === format(day, 'yyyy-MM-dd')
                             );
 
@@ -183,6 +188,34 @@ function renderCalendar(pointDate: Date,
     )
 }
 
+// Redux에 있는지 확인 후 없으면 서버에서 데이터를 가져오는 함수
+async function checkAndFetchMealData(month: string, mealData: any, dispatch: AppDispatch) {
+    
+    if (!mealData || !mealData[month]) { // Redux에 해당 달 데이터가 없다면 서버에서 가져옴
+        const accessToken = await AsyncStorage.getItem('accessToken'); //accessToken을 우선 가져온다
+      
+        try {
+            const response = await axios.get(`http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${month}`, {
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Authorization': `Bearer ${accessToken}`,
+                }
+            });
+            dispatch(setMealInput({ month: month, mealData: response.data })); // Redux에 저장
+
+            console.log(month ,'불러오기 완료');
+
+            return response.data[month];
+
+        } catch (error) {
+            console.error('서버에서 데이터를 불러오는 중 에러 발생: ', error);
+        }
+    } else { //있으면 걍 넘겨
+        console.log(month,'Redux에 데이터가 있어서 여기 옴');
+        return mealData[month];
+    }
+}
+
 
 //UI적으로 라이브러리로는 내가 원하는 Calendar를 구현할 수 없으므로,직접 구현할 것이다
 function Calendar(props: any){
@@ -199,14 +232,26 @@ function Calendar(props: any){
     //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
 
-    // 현재 달에 대한 mealInput 데이터를 가져옴
-    const pointMonth = format(props.pointDate, 'yyyy-MM');
-    const mealDataForMonth = useSelector((state: RootState) => state.mealInput.data[pointMonth]);
+    //mealData 관련 정보를 가져온다
+    let mealInputData = useSelector((state: RootState) => state.mealInput.data);
 
-    console.log(props.pointDate);
+    let [mealInputForMonth, setMealInputForMonth] = useState(null);
+
+    //해당 동작은 props.pointDate가 변할 때만 수행하면 된다
+    useEffect(() => {
+        const fetchMealData = async () => {
+            const currentMonth = format(props.pointDate, 'yyyy-MM');
+            //Redux에 데이터가 없을 경우에만 서버에서 가져오기
+            const data = await checkAndFetchMealData(currentMonth, mealInputData, dispatch);
+            setMealInputForMonth(data);
+        }
+
+        fetchMealData(); //mealData를 가져와서 mealInputForMonth State에 집어 넣는다
+    }, [props.pointDate]);
 
     //markedDate를 업데이트하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
+
     const updateMarkedDate = (date: string) => {
         dispatch(setMarkedDate(date));
     }
@@ -246,21 +291,28 @@ function Calendar(props: any){
         //왼쪽으로 스크롤했을 경우
         if(offsetX < prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
-            props.setPointDate((prevDate)=>{ return subMonths(prevDate, 1)});
-            scrollEnabledRef.current = true;
+
+            const newDate = subMonths(props.pointDate, 1);
+            props.setPointDate(newDate);
             
         //오른쪽으로 스크롤했을 경우
         } else if(offsetX > prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
-            props.setPointDate((prevDate)=>{ return addMonths(prevDate, 1)});
-            scrollEnabledRef.current = true;
+
+            const newDate = addMonths(props.pointDate, 1);
+            props.setPointDate(newDate); // 상태 업데이트
         } else {
             console.log("스크롤 이벤트 발생하지 않음");
         }
 
         prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교
 
-    },[props.setPointDate]);
+    },[props.pointDate]);
+
+    useEffect(() => {
+        // pointDate가 변경된 후에만 스크롤을 다시 활성화함
+        scrollEnabledRef.current = true;
+    }, [props.pointDate]);
 
 
     return (
@@ -289,7 +341,15 @@ function Calendar(props: any){
                     style={{flex: 0.96}}
                     ref={flatListRef}
                     data={monthDataRef.current}
-                    renderItem={({item, index}) => renderCalendar(item.date, props.setPointDate, markedDate, updateMarkedDate, flatListRef, index, prevOffsetX, mealDataForMonth)}
+                    renderItem={({item, index}) => renderCalendar(item.date,
+                        props.setPointDate,
+                        markedDate, 
+                        updateMarkedDate, 
+                        flatListRef, 
+                        index,
+                        prevOffsetX, 
+                        mealInputForMonth,
+                        )} //이전, 현재, 다음 달 데이터 전달
                     keyExtractor={(item) => item.key} 
                     horizontal
                     pagingEnabled
