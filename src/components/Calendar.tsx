@@ -31,9 +31,10 @@ const contentWidth = windowWidth - marginHorizontal * 2;
 //redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
 function makeMealInputMarking(day: Date, mealDataForDate: any) {
 
-    //해당하는 것에 따라 컴포넌트를 return 한다
+    //해당하는 것에 따라 컴포넌트를 return 한다 (이전, 이후 월의 날짜(회색으로 표시된 날짜)를 표시할 때 여기로 분기될 것이다)
+    //걍 이 경우에도 white로 마커 처리한다
     if (!mealDataForDate) {
-        return null; // mealData가 없는 경우 처리
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'white'}]}/>
     }
 
     //해당하는 것에 따라 컴포넌트를 return 한다
