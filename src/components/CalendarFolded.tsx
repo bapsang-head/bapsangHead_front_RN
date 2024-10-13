@@ -18,9 +18,34 @@ import {
     getDate
     } from 'date-fns'; //달력을 직접 만들기 위한 date-fns 라이브러리 import!
 
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import axios from 'axios'
+import { setMealInput } from '../slices/mealInputSlice'; // mealInputSlice 파일에서 setMealInput 액션 가져오기
+
 const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
+
+//redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
+function makeMealInputMarking(mealDataForDate: any) {
+
+    //해당하는 것에 따라 컴포넌트를 return 한다
+    //걍 이 경우에도 white로 마커 처리한다
+    if (!mealDataForDate) {
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'white'}]}/>
+    }
+
+    //해당하는 것에 따라 컴포넌트를 return 한다
+    if(mealDataForDate.식단입력여부 === "NONE") {
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'white'}]}/>
+    }
+    else if(mealDataForDate.식단입력여부 === "ENTERING") {
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: '#FFA500'}]}/>
+    }
+    else if(mealDataForDate.식단입력여부 === "COMPLETE") {
+        return <View style={[styles.calendarInputStatusMarker, {backgroundColor: '#008000'}]}/>
+    }
+}
 
 //한 주 달력에 들어갈 내용((날짜(Date))들의 배열을 만든다.
 function makeWeekCalendarDays(pointDate: Date) {
@@ -40,13 +65,13 @@ function makeWeekCalendarDays(pointDate: Date) {
 }
 
 //한 주치 Calendar를 렌더링 해주는 함수
-function renderWeekCalendar(pointDate: Date, 
+function renderWeekCalendar(
+    weekCalendarDays: Date[], 
     setPointDate: Function, 
     markedDate: string | null, 
-    updateMarkedDate: Function) 
+    updateMarkedDate: Function,
+    mealDataByDate: any[]) 
     {
-
-    let weekCalendarDays = makeWeekCalendarDays(pointDate);
 
     //받아온 한 주치 날짜를 바탕으로 주 캘린더를 찍어낸다
     return (
@@ -67,6 +92,8 @@ function renderWeekCalendar(pointDate: Date,
                     //해당 경우엔 모든 날짜를 검은 색으로 표시
                     style={color: "black"};
 
+                    const mealDataForDate = mealDataByDate[index]; //날짜별로 입력 현황 마커를 찍기 위한 mealDataForDate
+
                     //결과적으로 화면에 뿌려줄 것이다
                     return (
                         //각 날짜는 터치가 가능하도록 설계
@@ -84,7 +111,7 @@ function renderWeekCalendar(pointDate: Date,
                                     <View style={[styles.calendarMarker, markerStyle]}>
                                         <Text style={[style, {fontSize: 24}]}>{getDate(day)}</Text>
                                     </View>
-                                    <View style={[styles.calendarInputStatusMarker, {backgroundColor: 'green'}]}/>
+                                    {makeMealInputMarking(mealDataForDate)}
                                 </View>
                             }
                         </TouchableOpacity>
@@ -93,6 +120,41 @@ function renderWeekCalendar(pointDate: Date,
             }
         </View>
     )
+}
+
+// 날짜별 meal input 데이터를 서버에서 가져오는 함수
+//주간 달력에서는 구분이 애매하므로, 주간 달력에 나와있는 날짜들의 month 값을 일일이 갖고 와서 마킹할 수 있도록 해야 한다
+//만약 해당 월의 데이터가 없으면, 월간 달력에서처럼 서버 요청을 해야겠죠?
+async function fetchMealDataForWeek(
+    weekCalendarDays: Date[], 
+    mealData: any, 
+    dispatch: AppDispatch
+) {
+    //Promise 객체와 map 함수를 이용해서 지속 요청을 진행할 것임
+    const dataPromises = weekCalendarDays.map(async (day) => {
+        const month = format(day, 'yyyy-MM');
+        if (!mealData || !mealData[month]) {
+            const accessToken = await AsyncStorage.getItem('accessToken');
+            try {
+                const response = await axios.get(`http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${month}`, {
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Authorization': `Bearer ${accessToken}`,
+                    }
+                });
+                dispatch(setMealInput({ month: month, mealData: response.data }));
+                console.log('음식 입력 현황을 불러오기 위해 서버 요청을 함!');
+                return response.data[month]?.find((meal) => meal.date === format(day, 'yyyy-MM-dd'));
+            } catch (error) {
+                console.error('데이터를 가져오는 중 에러 발생: ', error);
+            }
+        } else {
+            console.log('음식 입력 현황을 redux에서 불러옴!');
+            return mealData[month]?.find((meal) => meal.date === format(day, 'yyyy-MM-dd'));
+        }
+    });
+
+    return Promise.all(dataPromises);
 }
 
 //접힌 캘린더 또한, UI적으로 라이브러리로는 내가 원하는 Calendar를 구현할 수 없음, 직접 구현할 것이다
@@ -110,10 +172,14 @@ function CalendarFolded(props: any) {
     //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
 
+    //mealData 관련 정보를 가져온다
+    let mealInputData = useSelector((state: RootState) => state.mealInput.data);
+
     console.log(props.pointDate);
 
     //markedDate를 업데이트하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
+
     const updateMarkedDate = (date: string) => {
         dispatch(setMarkedDate(date));
     }
@@ -125,6 +191,28 @@ function CalendarFolded(props: any) {
             return { key: `week-${i}`, date: addWeeks(markedDate, diff) };
         })
     );
+
+    const [mealDataByDate, setMealDataByDate] = useState<any[]>([]);
+    const [weekCalendarDays, setWeekCalendarDays] = useState<Date[]>([]);
+    const [isLoading, setIsLoading] = useState(true); // 로딩 상태 추가
+
+    // 주간 캘린더 데이터를 불러오는 useEffect
+    useEffect(() => {
+        //한 주치 날짜를 만들고, 입력 현황을 불러오는 역할을 하는 함수 fetchWeekData
+        const fetchWeekData = async () => {
+            setIsLoading(true); // 데이터를 가져오기 전에 로딩 상태로 전환
+            // // 새로운 주차로 넘어가기 전에 mealDataByDate 초기화
+            // setMealDataByDate([]); // 이전 주차의 데이터를 초기화
+
+            const days = makeWeekCalendarDays(props.pointDate); //달력에 들어간 주간 달력 날짜들을 만든다(pointDate 기준)
+            setWeekCalendarDays(days);
+            const mealData = await fetchMealDataForWeek(days, mealInputData, dispatch); //한 주간 관련해서 입력 현황을 불러온다(필요시 서버 요청도 함)
+            setMealDataByDate(mealData);
+
+            setIsLoading(false); //데이터를 모두 가져오면 로딩 완료
+        };
+        fetchWeekData();
+    }, [props.pointDate]);
 
     useEffect(() => {
         //initialScrollIndex에 맞는 초기 offsetX를 설정
@@ -195,26 +283,32 @@ function CalendarFolded(props: any) {
                 </View>
                 {/* FlatList를 이용해서 날짜 무한 스크롤을 구현한다, UI 디자인 보기 좋게 하기 위해서.. 'marginTop: 8, height: 44' 옵션 추가.. */}
                 {/* 해당 구역에선 flex로 비율값을 맞추기 보단, 고정적인 dp 값으로 layout 구성이 옳다고 판단 */}
-                <FlatList
-                    style={{marginTop: 8}}
-                    ref={flatListRef}
-                    data={weekDataRef.current}
-                    renderItem={({item}) => renderWeekCalendar(item.date, props.setPointDate, markedDate, updateMarkedDate)}
-                    keyExtractor={(item) => item.key} 
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    onMomentumScrollEnd={handleScroll} //스크롤이 끝날 때의 이벤트를 처리한다
-                    initialScrollIndex={INITIAL_INDEX} //해당 값을 INITIAL_INDEX로 넘겨 주어서 초기에는 현재 주가 가운데에 오도록 처리
-                    getItemLayout={(data, index) => (
-                        { length: contentWidth, offset: contentWidth * index, index}
-                    )}
 
-                    //렌더링 성능 최적화를 위한 props (initialNumToRender, maxToRenderPerBatch, windowSize)
-                    initialNumToRender={5}
-                    maxToRenderPerBatch={5}
-                    windowSize={5} // 현재 화면 크기의 5배에 해당하는 항목을 렌더링
+                {/* 로딩 중인 경우 로딩 표시 */}
+                {isLoading ? (
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                        <Text>Loading...</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        style={{ marginTop: 8 }}
+                        ref={flatListRef}
+                        data={weekDataRef.current}
+                        renderItem={({ item }) =>
+                            renderWeekCalendar(weekCalendarDays, props.setPointDate, markedDate, updateMarkedDate, mealDataByDate)
+                        }
+                        keyExtractor={(item) => item.key}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onMomentumScrollEnd={handleScroll}
+                        initialScrollIndex={INITIAL_INDEX}
+                        getItemLayout={(data, index) => ({ length: contentWidth, offset: contentWidth * index, index })}
+                        initialNumToRender={5}
+                        maxToRenderPerBatch={5}
+                        windowSize={5}
                     />
+                )}
             </View>
         </View>
     )
