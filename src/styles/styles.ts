@@ -213,7 +213,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 10,
+    marginBottom: 5,
+    marginTop: 5
   },
   startStyleInInputStatus: {
     flexDirection: 'row',

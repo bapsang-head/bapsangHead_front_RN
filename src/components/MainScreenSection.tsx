@@ -42,11 +42,11 @@ async function fetchMealInfo(eatingTime: string, formattedDate: string) {
   let mealType: string = null;
   
   //들어온 값에 맞는 mealType을 지정해준다
-  if(eatingTime == '아침 식사') {
+  if(eatingTime === '아침 식사') {
     mealType = 'BREAKFAST';
-  } else if(eatingTime == '점심 식사') {
+  } else if(eatingTime === '점심 식사') {
     mealType = 'LUNCH'
-  } else if(eatingTime == '저녁 식사') {
+  } else if(eatingTime === '저녁 식사') {
     mealType = 'DINNER'
   }
 
@@ -88,17 +88,36 @@ function makeSimpleFoodData(response: any)
   }));
 }
 
+//칼로리 계산하기
+function calculateTotalCalories(mealInfo: any) {
+
+  const transformedResult = mealInfo.map(item => ({
+      //칼로리 필요한 경우 소수점 둘째 자리까지 반올림하여 계산 (계산식 적용)
+      calorie: Math.round((item.calorie) * ((item.gram) / 100) * item.count)
+  }));
+  
+  //총 칼로리 값을 계산한다(reduce 함수 활용)
+  const totalCalories = transformedResult.reduce((result, item) => {
+      result.calorie += item.calorie;
+      return result;
+  }, {calorie: 0});
+
+  return totalCalories.calorie;
+}
+
 //상황에 맞게 Section을 만들어낼 것이다
-function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDate}) {
+function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDate, setMealInfoDetail}) {
 
     let [isSectionFolded, setIsSectionFolded] = useState(true); //section을 접었다 폈다 하는 state
-    let [serverResponse, setServerResponse] = useState(null); //서버에서 받아온 response 전체
     let [simplifiedData, setSimplifiedData] = useState(null); //서버에서 받아온 정보를 가공해서 name, unit, count만을 저장한 state
+    let [totalCalories, setTotalCalories] = useState(0); //각 section마다 표시해 줄 total Calorie를 state로 나타낸다
+    let [checkNull, setCheckNull] = useState(true); //section이 펼쳐질 때 확인해야 하는 값(불러온 게 null이면 true, 아니면 false) 
 
     //markedDate가 변할 때마다 sectionFolded는 true로 설정되어야 한다. (=선택한 날짜가 바뀔 때마다 카드 섹션은 접혀야 한다.)
     useEffect(() => {
       setIsSectionFolded(true);
     },[markedDate]);
+
 
     // simplifiedData가 변경될 때마다 로그를 출력하는 useEffect 추가
     useEffect(() => {
@@ -121,18 +140,21 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
         if(response !== null)
         {
           setSimplifiedData(makeSimpleFoodData(response)); //간단하게 가공한 정보를 simplifiedData 값으로 설정
+          setTotalCalories(calculateTotalCalories(response)) //로컬(section 컴포넌트)에 칼로리를 계산하여 저장한다
+          setCheckNull(false); //이 값이 false가 됨으로써, section을 펼칠 것이다
         }
-        
-        setServerResponse(response); //서버에서 불러온 전체 정보도 저장한다 (세부 영양성분 보여줄 때 필요하거든)
+        setMealInfoDetail(response) //서버에서 불러온 전체 정보도 저장한다 (세부 영양성분 보여줄 때 필요하거든 / props로 받은 setMealInfo() state 변경함수 활용)
       }
       setIsSectionFolded(!isSectionFolded); //section을 접었다 폈다 하는 state 변화 주기
     } 
 
+    //간단한 식단 정보(simplifiedData)를 출력하는 메소드
     function returnMealInfo() {
-      if(simplifiedData !== null) { //식단 정보가 불려와 졌으면
+      if(!checkNull) { //식단 정보가 불려와 졌으면
         return (
           <>
           {/* 식단 정보 출력 */}
+          <Text style={{marginTop: 12, marginLeft: 12, fontSize: 24, fontWeight: 'bold'}}>{totalCalories}kcal</Text>
           {simplifiedData.map((item, index) => (
             <View key={index}>
               <Text style={{marginVertical: 4, marginLeft: 12}}>{item.name} {item.count}{item.unit}</Text>
@@ -148,7 +170,7 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
               </View>
             </TouchableOpacity>
             <View style={{flex: 1}}></View>
-            <TouchableOpacity onPress={toggleBottomSheet} style={{flex: 3}}>
+            <TouchableOpacity onPress={()=>toggleBottomSheet(eatingTime)} style={{flex: 3}}>
               <View style={styles.section_Button_short}>
                 <WatchDetailsIcon height={20} width={20} opacity={1}/>
                 <Text style={{textAlign: 'center', marginLeft: 8, fontSize: 14}}>세부 영양성분</Text>

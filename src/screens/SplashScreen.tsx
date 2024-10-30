@@ -13,7 +13,7 @@ import { RootState, AppDispatch } from '../store'
 import { setHeight, setWeight, setAge, setGender, setActivityLevel, setName, setEmail } from "../slices/accountInfoSlice";
 import { setMealInput } from '../slices/mealInputSlice';
 
-//월별 식단 입력 정보 데이터를 서버로부터 불러와서 redux에 저장하는 함수
+//'월별 식단 입력 정보 데이터'를 서버로부터 불러와서 redux에 저장하는 함수
 async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
 
     try {

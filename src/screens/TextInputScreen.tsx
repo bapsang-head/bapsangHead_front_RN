@@ -1,7 +1,6 @@
 import React, {useState, useLayoutEffect, useRef, useEffect} from 'react';
 import {View, Text, TextInput, Button, StyleSheet, TouchableOpacity} from 'react-native';
-import { NavigationContainer, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import {styles} from '../styles/styles';
@@ -14,7 +13,13 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
+import { setHeight, setWeight, setAge, setGender, setActivityLevel, setEmail, setName } from "../slices/accountInfoSlice";
+
 import { parseISO, format } from 'date-fns';
+
+import { setMealInput } from '../slices/mealInputSlice';
+
+import * as KakaoLogins from "@react-native-seoul/kakao-login"; //accessToken 만료 시 카카오 로그아웃을 자동으로 수행해야 함
 
 //StackNavigator의 ParamList 타입을 정의한다
 //TypeScript에서 발생하는 route.params 객체에 eatingTime과 markedDate가 없을 수도 있다고 예상할 수 있음.
@@ -25,18 +30,6 @@ type RootStackParamList = {
     markedDate: string;
   }
 }
-
-// //개별 아이템의 타입 정의
-// interface FoodItem {
-//   food: string;
-//   unit: string;
-//   quantity: number;
-// }
-
-// //데이터 배열의 타입 정의
-// interface FoodData {
-//   data: FoodItem[];
-// }
 
 //두번째 분석을 위해 서버에 보낼 requestBody를 만드는 function
 function makeSecondRequestBody(eatingTime: string, 
@@ -72,6 +65,18 @@ function extractFoodAndUnit(analysisResult: {food: string, unit: string, quantit
     food: item.food,
     unit: item.unit
   }));
+}
+
+//axios 저장소에 저장되어 있는 회원 정보 초기화
+function initializeAccountInfo()
+{
+  setName(null);
+  setEmail(null);
+  setWeight(null);
+  setHeight(null);
+  setAge(null);
+  setGender(null);
+  setActivityLevel(null);
 }
 
 //'드신 음식을 입력해 주세요' 화면 (실질적으로 프로젝트의 기술 집약 파트)
@@ -159,6 +164,35 @@ function TextInputScreen(){
     setCompleteBtnAvailable(text.trim().length > 0);
   }
 
+  //accessToken 만료로 인한 오류 발생 시 자동 로그아웃 수행을 위한 autoLogOut 함수
+  async function autoLogOut() {
+    // 로그아웃이 필요할 때 alert 창을 띄워 알림
+    alert("accessToken이 만료되어 로그아웃을 수행합니다");
+
+    // "Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
+    try {
+        const logOutString = await KakaoLogins.logout(); // 카카오 로그아웃 수행
+        if (logOutString != null) {
+            console.log(logOutString); // 받아온 정보 log에 찍어보기
+            await EncryptedStorage.removeItem('refreshToken'); // refreshToken 삭제
+            await AsyncStorage.removeItem('accessToken'); // accessToken 삭제
+            initializeAccountInfo(); //redux 저장소에 저장되어 있는 회원 정보 초기화
+            nav.dispatch(
+              CommonActions.reset({
+                index: 0, //Navigation Stack에 'LoginScreen'만 남도록 설정
+                routes: [
+                  {name: 'LoginScreen'}
+                ]
+              })
+            )
+        } else {
+            console.log('로그아웃 정상적으로 안됨!');
+        }
+    } catch (error) {
+        console.log(error);
+    }
+  }
+
   //사용자가 입력한 문장 1차 분석 (재시도 요청에 사용될 변수 retryCount)
   async function userInputAnalysis_First(retryCount = 0, controller) {
     console.log('사용자가 입력한 문장: ', inputText);
@@ -199,7 +233,7 @@ function TextInputScreen(){
       } else if (error.message === 'Network Error') { //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
         console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
         // 네트워크 오류 발생 시 재시도
-        if (retryCount < 5) {
+        if (retryCount < 6) {
           return new Promise((resolve) => {
             setTimeout(() => {
               resolve(userInputAnalysis_First(retryCount + 1, controller));
@@ -212,8 +246,8 @@ function TextInputScreen(){
       } else if(error.code === 'ECONNABORTED') {
         console.warn('10초가 지났습니다. 재시도 중...', retryCount + 1);
 
-        //재시도 횟수를 제한할 수 있다. 여기서는 우선 5번으로 제한함
-        if(retryCount < 5) {
+        //재시도 횟수를 제한할 수 있다. 여기서는 우선 6번으로 제한함
+        if(retryCount < 6) {
           return new Promise((resolve) => {
             setTimeout(() => {
               resolve(userInputAnalysis_First(retryCount + 1, controller));
@@ -222,6 +256,9 @@ function TextInputScreen(){
         } else {
           console.error('재시도 횟수를 초과했습니다.');
         }
+      } else if(error.response?.status === 401){
+        console.log("인증 에러: 401 - 자동 로그아웃 수행");
+        await autoLogOut(); //자동 로그아웃 함수 호출
       } else {
         console.error('post 요청 중 에러 발생: ', error);
       }
@@ -249,7 +286,7 @@ function TextInputScreen(){
               'Content-Type': 'application/json;charset=UTF-8',
               'Authorization': `Bearer ${accessToken}`,
           },
-          timeout: 5000,
+          timeout: 30000,
           signal: controller.signal,
         });
 
@@ -278,18 +315,23 @@ function TextInputScreen(){
           console.error('네트워크 오류로 인해 재시도 횟수를 초과했습니다.');
         }
       
-      //요청이 5초 이상 걸리는 경우에도 재시도를 해야 한다
-      } else if (error.code === 'ECONNABORTED') {
-        console.warn('5초가 지났습니다. 재시도 중...', retryCount + 1);
-        if (retryCount < 8) {
-          return new Promise((resolve) => {
-            setTimeout(() => {
-              resolve(userInputAnalysis_Second(retryCount + 1, controller));
-            }, 1000);
-          });
-        } else {
-          console.error('재시도 횟수를 초과했습니다.');
-        }
+      //요청이 30초 이상 걸리는 경우에도 재시도를 해야 한다 (없애기)
+      } 
+      // else if (error.code === 'ECONNABORTED') {
+      //   console.warn('5초가 지났습니다. 재시도 중...', retryCount + 1);
+      //   if (retryCount < 8) {
+      //     return new Promise((resolve) => {
+      //       setTimeout(() => {
+      //         resolve(userInputAnalysis_Second(retryCount + 1, controller));
+      //       }, 1000);
+      //     });
+      //   } else {
+      //     console.error('재시도 횟수를 초과했습니다.');
+      //   }
+      // }
+      else if(error.response?.status === 401) {
+        console.log("인증 에러: 401 - 자동 로그아웃 수행");
+        await autoLogOut(); //자동 로그아웃 함수 호출
       } else {
         console.error('음식 정보 업로드 중 에러 발생: ', error);
       }
@@ -361,8 +403,43 @@ function TextInputScreen(){
         } else {
           console.error('재시도 횟수를 초과했습니다.');
         }
+      } else if(error.response?.status === 401){
+        console.log("인증 에러: 401 - 자동 로그아웃 수행");
+        await autoLogOut(); //자동 로그아웃 함수 호출
       } else {
         console.error('음식 정보 조회 중 에러 발생: ', error);
+      }
+    }
+
+    //음식 입력 현황이 변했으므로, 마지막 과정에서 서버로부터 입력 현황 정보를 다시 받아와서 axios를 업데이트 해야 한다
+    try {
+      let markedMonth = format(new Date(markedDate), 'yyyy-MM'); //기준 날짜를 YYYY-MM 형식으로 formatting
+
+      //markedMonth를 url에 집어넣어 추후 axios를 활용하여 get 요청을 날릴 것이다
+      const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${markedMonth}`
+
+      if(accessToken) {
+          //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 axios에 월별 입력 현황을 update 한다
+          const response = await axios.get(url, {
+            headers: {
+                'Content-Type': 'application/json;charset=UTF-8',
+                'Authorization': `Bearer ${accessToken}`,
+            },
+            timeout: 5000,
+            signal: controller.signal,
+          });
+
+          // 받아온 데이터를 redux에 각각 저장 (setMealInput 상태변경 함수는 직접 import했다)
+          setMealInput({ month: markedMonth, mealData: response.data });
+          console.log(markedMonth, '기준으로 잘 불러옴!');
+      }
+    } catch (error) {
+
+      if(error.response?.status === 401){
+        console.log("인증 에러: 401 - 자동 로그아웃 수행");
+        await autoLogOut(); //자동 로그아웃 함수 호출
+      } else {
+        console.error('Meal Input 데이터 불러오는 중 기타 에러 발생: ', error);
       }
     }
   }

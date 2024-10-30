@@ -11,14 +11,7 @@ import { styles } from '../styles/styles';
 //svg Icon들 import!
 import ArrowUpIcon from '../assets/svg/arrow_drop_up.svg'
 import ArrowDownIcon from '../assets/svg/arrow_drop_down.svg'
-import MorningIcon from '../assets/svg/morning.svg'
-import LunchIcon from '../assets/svg/lunch.svg'
-import DinnerIcon from '../assets/svg/dinner.svg'
-import PenIcon from '../assets/svg/pen.svg'
-import SlimArrowDownIcon from '../assets/svg/slimArrow_Down.svg'
-import SlimArrowUpIcon from '../assets/svg/slimArrow_Up.svg'
-import WatchDetailsIcon from '../assets/svg/watch_detail.svg'
-import FixDietIcon from '../assets/svg/fix_diet.svg'
+
 
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from "../store";
@@ -37,12 +30,10 @@ import CalendarFolded from '@components/CalendarFolded';
 import DetailBottomSheetModal from '@components/DetailBottomSheetModal'
 import MainScreenSection from '@components/MainScreenSection';
 
-import AsyncStorage from '@react-native-async-storage/async-storage'
-
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 //메인화면 Component
-function MainScreen({route, navigation}) {
+function MainScreen({navigation}) {
 
   const bottomSheetRef = useRef<BottomSheet>(null); // Reference for the bottom sheet
 
@@ -51,24 +42,38 @@ function MainScreen({route, navigation}) {
   let [pointDate, setPointDate] = useState(new Date()); 
   let [isCalendarOpened, setIsCalendarOpened] = useState(false); //Calendar의 visibility를 관리한다
 
+  let [mealInfoDetail_Morning, setMealInfoDetail_Morning] = useState(null); //세부 영양정보 표시를 위해 사용하는 state (추후, 세부영양성분 표시 bottomsheet에 사용 예정)
+  let [mealInfoDetail_Lunch, setMealInfoDetail_Lunch] = useState(null); //세부 영양정보 표시를 위해 사용하는 state (추후, 세부영양성분 표시 bottomsheet에 사용 예정)
+  let [mealInfoDetail_Dinner, setMealInfoDetail_Dinner] = useState(null); //세부 영양정보 표시를 위해 사용하는 state (추후, 세부영양성분 표시 bottomsheet에 사용 예정)
+  let [detailInfo_Time, setDetailInfo_Time] = useState(null); //어느 section에서 세부 영양정보 표시 버튼을 눌렀는지 확인해야 함 (아침, 점심, 저녁 식사 중 하나일 것임)
+
   //redux에 저장되어 있는 markedDate 정보를 가져온다
   let markedDate = useSelector((state: RootState) => state.markedDate.date);
-
-  //markedDate를 업데이트 하기 위한 코드
-  const dispatch: AppDispatch = useDispatch();
-  const updateMarkedDate = (date: string) => {
-    dispatch(setMarkedDate(date));
-  }
 
   //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다 (의존성 배열로 isCalendarOpened, markedDate를 집어 넣는다)
   let toggleCalendar = useCallback(() => {
 
-    //렌더링은 markedDate 있는 날짜 기준으로 렌더링 되어야 한다
-    setPointDate(new Date(markedDate));
+    // 렌더링은 markedDate 있는 날짜 기준으로 렌더링 (markedDate와 다를 경우에만 업데이트)
+    if (pointDate.toISOString() !== new Date(markedDate).toISOString()) {
+      setPointDate(new Date(markedDate));
+    }
     
     //Calendar가 펴져 있는지, 접혀 있는지에 대한 상태값을 바꾼다
     setIsCalendarOpened(!isCalendarOpened);
-  }, [isCalendarOpened, markedDate]);
+  }, [isCalendarOpened, markedDate, pointDate]);
+
+  //분기해서 세부 영양성분을 잘 출력하는 renderBottomSheet()
+  function renderBottomSheet()
+  {
+    //각 section에 따라 설정을 다르게 해야 한다
+    if(detailInfo_Time === '아침 식사'){
+      return <DetailBottomSheetModal mealInfoDetail={mealInfoDetail_Morning} />
+    } else if(detailInfo_Time === '점심 식사') {
+      return <DetailBottomSheetModal mealInfoDetail={mealInfoDetail_Lunch} />
+    } else if(detailInfo_Time === '저녁 식사') {
+      return <DetailBottomSheetModal mealInfoDetail={mealInfoDetail_Dinner} />
+    }
+  }
 
   //'세부 영양성분' BottomSheet 관련 코드
   const translateY = useSharedValue(SCREEN_HEIGHT); //최초의 BottomSheet 위치 (off-screen)
@@ -100,11 +105,12 @@ function MainScreen({route, navigation}) {
   }
 
   //DetailBottomSheet를 띄우는 버튼을 클릭했을 때의 동작
-  const toggleBottomSheet = () => {
+  const toggleBottomSheet = (eatingTime: string) => {
     if(detailBS_IsVisible) {
       closeBottomSheet(); 
     } else {
       runOnJS(setDetailBS_IsVisible)(true); //Inline 함수들을 사용하지 말도록 하자
+      setDetailInfo_Time(eatingTime);
       openBottomSheet();
     }
   };
@@ -132,7 +138,7 @@ function MainScreen({route, navigation}) {
   //year, month (기준이 되는 pointDate 기준으로 렌더링)
   let year = getYear(pointDate);
   let month = getMonth(pointDate) + 1;
-  
+
 
   return (
     <>
@@ -171,9 +177,24 @@ function MainScreen({route, navigation}) {
 
           {/* 스크롤 뷰 안에는 아침,점심,저녁 식단 입력을 확인할 수 있는 창들이 나올 것임 */}
           <ScrollView showsVerticalScrollIndicator={false} style={{marginBottom: 64}}>
-            <MainScreenSection eatingTime={'아침 식사'} navigation={navigation} toggleBottomSheet={toggleBottomSheet} markedDate={markedDate}/>
-            <MainScreenSection eatingTime={'점심 식사'} navigation={navigation} toggleBottomSheet={toggleBottomSheet} markedDate={markedDate}/>
-            <MainScreenSection eatingTime={'저녁 식사'} navigation={navigation} toggleBottomSheet={toggleBottomSheet} markedDate={markedDate}/>
+            <MainScreenSection 
+              eatingTime={'아침 식사'} 
+              navigation={navigation} 
+              toggleBottomSheet={toggleBottomSheet} 
+              markedDate={markedDate} 
+              setMealInfoDetail={setMealInfoDetail_Morning}/>
+            <MainScreenSection 
+              eatingTime={'점심 식사'} 
+              navigation={navigation} 
+              toggleBottomSheet={toggleBottomSheet} 
+              markedDate={markedDate} 
+              setMealInfoDetail={setMealInfoDetail_Lunch}/>
+            <MainScreenSection 
+              eatingTime={'저녁 식사'} 
+              navigation={navigation} 
+              toggleBottomSheet={toggleBottomSheet} 
+              markedDate={markedDate} 
+              setMealInfoDetail={setMealInfoDetail_Dinner}/>
           </ScrollView>
         </View>
 
@@ -199,7 +220,7 @@ function MainScreen({route, navigation}) {
           )
         }
 
-        {/* 세부 영양정보 관련 BottomSheet */}
+        {/* 세부 영양정보 관련 BottomSheet (세부 영양성분 분석을 위해 mealInfo state를 props로 넘겨준다)*/}
         <Animated.View style={[MainStyles.bottomSheet, animatedStyle]}>
           {/* 드래그가 가능한 부분(상단 부분)을 설정한다 */}
           <GestureDetector gesture={panGesture}>
@@ -207,7 +228,8 @@ function MainScreen({route, navigation}) {
               <Text style={MainStyles.dragText}>Drag Area</Text>
             </View>
           </GestureDetector>
-          <DetailBottomSheetModal/>
+          {/* mealInfo가 null이 아니면 DetailBottomSheetModal을 렌더링 */}
+          {renderBottomSheet()}
         </Animated.View>
 
       </>
@@ -284,6 +306,13 @@ const MainStyles = StyleSheet.create({
   dragText: {
     fontWeight: 'bold',
     color: '#333',
+  },
+  placeholder: {
+    flex: 1, // 화면 전체를 차지하도록 설정
+    justifyContent: 'center', // 세로 중앙 정렬
+    alignItems: 'center', // 가로 중앙 정렬
+    padding: 20, // 여백 추가
+    backgroundColor: '#f0f0f0', // 배경색을 연한 회색으로 설정
   },
 });
 

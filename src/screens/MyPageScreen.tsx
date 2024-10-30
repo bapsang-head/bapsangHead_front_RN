@@ -1,10 +1,6 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, Image } from 'react-native';
-import { Calendar, CalendarList, LocaleConfig, ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
-import BottomSheet from '@gorhom/bottom-sheet';
-import moment from 'moment';
 import { styles } from '../styles/styles';
 
 import * as KakaoLogins from "@react-native-seoul/kakao-login";
@@ -152,7 +148,7 @@ function MyPageScreen({route, navigation}) {
                     <View style={{flexDirection: 'row', alignContent: 'center'}}>
                         <Image 
                             style={styles.profileImageCircle} 
-                            source={require('../assets/profile.png')}
+                            source={require('../assets/default_profile.png')}
                             resizeMode={'stretch'} />
                         <View style={{alignContent: 'center', marginLeft: 16, paddingVertical: 12, justifyContent: 'space-around'}}>
                             <Text style={{fontSize: 24, fontWeight: 'bold'}}>{accountInfo.name}</Text>

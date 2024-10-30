@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {View, Text, FlatList, ScrollView, Dimensions, TouchableOpacity} from 'react-native';
-import * as Progress from 'react-native-progress';
 import { styles } from '../styles/styles'
 
 import { useSelector, useDispatch } from "react-redux"
@@ -133,7 +132,7 @@ async function fetchMealDataForWeek(
     //Promise 객체와 map 함수를 이용해서 지속 요청을 진행할 것임
     const dataPromises = weekCalendarDays.map(async (day) => {
         const month = format(day, 'yyyy-MM');
-        if (!mealData || !mealData[month]) {
+        if (!mealData[month]) { //해당 월의 mealData가 redux 저장소에 없다면
             const accessToken = await AsyncStorage.getItem('accessToken');
             try {
                 const response = await axios.get(`http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${month}`, {
@@ -148,7 +147,7 @@ async function fetchMealDataForWeek(
             } catch (error) {
                 console.error('데이터를 가져오는 중 에러 발생: ', error);
             }
-        } else {
+        } else { //해당 월의 mealData가 redux 저장소에 있다면
             console.log('음식 입력 현황을 redux에서 불러옴!', format(day, 'yyyy-MM-dd'));
             return mealData[month]?.find((meal) => meal.date === format(day, 'yyyy-MM-dd'));
         }
@@ -172,10 +171,10 @@ function CalendarFolded(props: any) {
     //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
 
-    //mealData 관련 정보를 가져온다
+    //mealInputData 관련 정보를 가져온다
     let mealInputData = useSelector((state: RootState) => state.mealInput.data);
 
-    console.log(props.pointDate);
+    console.log('CalendarFolded 렌더링: ', props.pointDate);
 
     props.pointDate = markedDate; //초기값은 markedDate로 설정해야 함
 
@@ -209,7 +208,9 @@ function CalendarFolded(props: any) {
 
         };
         fetchWeekData();
-    }, [props.pointDate, mealInputData]);
+        scrollEnabledRef.current = true; //스크롤 다시 활성화
+
+    }, [props.pointDate]);
 
     useEffect(() => {
         //initialScrollIndex에 맞는 초기 offsetX를 설정
@@ -240,20 +241,18 @@ function CalendarFolded(props: any) {
         if(offsetX < prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
             props.setPointDate((prevDate)=>{ return subWeeks(prevDate, 1)});
-            scrollEnabledRef.current = true;
             
         //오른쪽으로 스크롤했을 경우
         } else if(offsetX > prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다
             props.setPointDate((prevDate)=>{ return addWeeks(prevDate, 1)});
-            scrollEnabledRef.current = true;
         } else {
             console.log("스크롤 이벤트 발생하지 않음");
         }
 
         prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교
 
-    },[props.setPointDate]);
+    },[contentWidth]);
 
 
     //calendarContainer의 높이 값은 고정값을 가져야 할 것 같다.

@@ -1,13 +1,12 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
-import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
-import moment from 'moment';
+import { View, Text, ScrollView } from 'react-native';
+import { useSelector } from 'react-redux';
 import { styles } from '../styles/styles';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Progress from 'react-native-progress';
 
-import Svg, { Line, Text as SvgText } from "react-native-svg";
+import { RootState } from '../store';
 
 import { 
     format,
@@ -20,11 +19,6 @@ import {
 
 import {
     LineChart,
-    BarChart,
-    PieChart,
-    ProgressChart,
-    ContributionGraph,
-    StackedBarChart
   } from "react-native-chart-kit";
 
 //7일 전까지의 날짜를 배열로 만든다
@@ -51,21 +45,64 @@ function makeDayList()
     return dayList;
 }
 
+//불러온 해당 월(currentMonth)의 식단 정보 형태를 MealData로 정의한다
+interface MealData {
+    date: string;
+    식단입력여부: string;
+}
 
+
+//'데이터 분석' 페이지
 function DetailScreen() {
     console.log("Detail rendering");
 
-    let [currentMonth, setCurrentMonth] = useState(getMonth(new Date())+1); // 초기값 현재 달 (getMonth() 함수 특성 상 +1 해주어야 함)
-    let [parentWidth, setParentWidth] = useState(0); //부모 컴포넌트의 너비를 받아오기 위한 State       
+    let [currentDate, setCurrentDate] = useState(new Date()); // 초기값 현재 달 (state는 Date 객체로 관리 후, 필요한 곳에 적절히 활용 예정)
+    let [parentWidth, setParentWidth] = useState(0); //부모 컴포넌트의 너비를 받아오기 위한 State      
+
+    let [dayOfAllInputs, setDayOfAllInputs] = useState(0); //모두 입력한 날
+    let [dayOfSomeInputs, setDayOfSomeInputs] = useState(0); //일부만 입력한 날
+    let [dayOfNothingInputs, setDayOfNothingInputs] = useState(0); //아무것도 입력하지 않은 날
+
+    //특정한 월의 식단 입력 데이터만 가져온다
+    const monthlyMealData: MealData[] = useSelector(
+        (state: RootState) => state.mealInput.data[format(currentDate, 'yyyy-MM')] || []
+    ); //redux 저장소에 있는 정보를 불러올 것이다
+
+    //monthlyMealData 값이 바뀔 때마다 해당 구문을 수행한다
+    useEffect(() => {
+
+        let countOf_NONE = 0;
+        let countOf_ENTERING = 0;
+        let countOf_COMPLETE = 0;
+
+        //map 함수를 이용해서 불러온 식단 입력 정보(monthlyMealData)를 순회하며 값 확인
+        monthlyMealData.map((meal) => {
+            if(meal.식단입력여부 === 'NONE'){
+                countOf_NONE = countOf_NONE + 1;
+            } else if(meal.식단입력여부 === 'ENTERING') {
+                countOf_ENTERING = countOf_ENTERING + 1;
+            } else if(meal.식단입력여부 === 'COMPLETE') {
+                countOf_COMPLETE = countOf_COMPLETE + 1;
+            }
+        })
+
+        console.log("세팅한 값: ", countOf_NONE, countOf_ENTERING, countOf_COMPLETE);
+
+        //해당하는 값들로 set
+        setDayOfNothingInputs(countOf_NONE);
+        setDayOfSomeInputs(countOf_ENTERING);
+        setDayOfAllInputs(countOf_COMPLETE);
+
+    }, [monthlyMealData])
+
     
-    let [dayOfAllInputs, setDayOfAllInputs] = useState(6); //모두 입력한 날
-    let [dayOfSomeInputs, setDayOfSomeInputs] = useState(11); //일부만 입력한 날
-    let [dayOfNothingInputs, setDayOfNothingInputs] = useState(13); //아무것도 입력하지 않은 날
 
     let dayList = makeDayList(); //7일 전까지의 날짜를 배열로 만든다
 
-    //입력 현황을 퍼센트로 계산한다
-    let statusForPercent = Math.round((dayOfAllInputs/(dayOfAllInputs+dayOfNothingInputs+dayOfSomeInputs))*100); //입력 현황을 퍼센트로 계산한다
+    // 입력 현황을 퍼센트로 계산, NaN일 경우 0으로 설정
+    let statusForPercent = dayOfAllInputs + dayOfNothingInputs + dayOfSomeInputs > 0 
+        ? Math.round((dayOfAllInputs / (dayOfAllInputs + dayOfNothingInputs + dayOfSomeInputs)) * 100) 
+        : 0;
     
     //Bar 차트 데이터 설정
     let data = {
@@ -113,7 +150,7 @@ function DetailScreen() {
                 <View style={styles.section_inDetailPage}>
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                         <MaterialCommunityIcons name="calendar-edit" size={36} color="black"/>
-                        <Text style={styles.sectionTitle}>{currentMonth}월 입력 현황</Text>
+                        <Text style={styles.sectionTitle}>{getMonth(currentDate)+1}월 입력 현황</Text>
                     </View>
                     
                     {/* Progress Bar 추가 (react-native-progress 라이브러리 활용) */}
@@ -136,7 +173,7 @@ function DetailScreen() {
                             </View>
                             <Text>{dayOfSomeInputs}일</Text>    
                         </View>
-                        <View style={styles.rowInDetailPage}>
+                        <View style={[styles.rowInDetailPage, {marginBottom: 10}]}>
                             <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                 <View style={[styles.circleStyleInInputStatus, {backgroundColor: 'lightgray'}]}/>
                                 <Text>아무것도 입력하지 않은 날</Text>
@@ -146,7 +183,7 @@ function DetailScreen() {
 
                         
                         <Progress.Bar 
-                            progress={statusForPercent/100}  
+                            progress={!isNaN(statusForPercent) ? statusForPercent / 100 : 0}  
                             width={parentWidth}//부모 너비를 받아와서 너비 설정
                             height={12}
                             animationConfig={{bounciness: 20}}

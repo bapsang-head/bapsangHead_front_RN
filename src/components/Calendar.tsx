@@ -237,6 +237,8 @@ function Calendar(props: any){
 
     let [mealInputForMonth, setMealInputForMonth] = useState(null);
 
+    console.log(props.pointDate);
+
     //해당 동작은 props.pointDate가 변할 때만 수행하면 된다
     useEffect(() => {
         const fetchMealData = async () => {
@@ -247,6 +249,9 @@ function Calendar(props: any){
         }
 
         fetchMealData(); //mealData를 가져와서 mealInputForMonth State에 집어 넣는다
+
+        // pointDate가 변경된 후에만 스크롤을 다시 활성화함
+        scrollEnabledRef.current = true;
     }, [props.pointDate]);
 
     //markedDate를 업데이트하기 위한 코드
@@ -292,27 +297,20 @@ function Calendar(props: any){
         if(offsetX < prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
 
-            const newDate = subMonths(props.pointDate, 1);
-            props.setPointDate(newDate);
+            props.setPointDate((prevDate) => subMonths(prevDate, 1)); //prevDate를 이용해 상태 업데이트
             
         //오른쪽으로 스크롤했을 경우
         } else if(offsetX > prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
             scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
 
-            const newDate = addMonths(props.pointDate, 1);
-            props.setPointDate(newDate); // 상태 업데이트
+            props.setPointDate((prevDate) => addMonths(prevDate, 1)); //prevDate를 이용해 상태 업데이트
         } else {
             console.log("스크롤 이벤트 발생하지 않음");
         }
 
         prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교
 
-    },[props.pointDate]);
-
-    useEffect(() => {
-        // pointDate가 변경된 후에만 스크롤을 다시 활성화함
-        scrollEnabledRef.current = true;
-    }, [props.pointDate]);
+    },[contentWidth]); //props.pointDate 대신 contentWidth에만 의존
 
 
     return (
