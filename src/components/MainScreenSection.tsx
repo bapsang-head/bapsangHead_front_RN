@@ -1,6 +1,6 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { CommonActions } from '@react-navigation/native';
 import { View, Text, Button, ScrollView, TouchableOpacity, Dimensions, StyleSheet, SafeAreaView } from 'react-native';
 import { styles } from '../styles/styles';
 
@@ -19,6 +19,10 @@ import { parseISO, format } from 'date-fns';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+//해당 화면에선 로그아웃을 위해 필요한 import들
+import EncryptedStorage from 'react-native-encrypted-storage';
+import * as KakaoLogins from "@react-native-seoul/kakao-login";
+
 function returnIcon(eatingTime: String) {
     if(eatingTime === '아침 식사')
     {
@@ -36,8 +40,36 @@ function returnIcon(eatingTime: String) {
     }
 }
 
+//accessToken 만료로 인한 오류 발생 시 자동 로그아웃 수행을 위한 autoLogOut 함수
+async function autoLogOut(navigation) {
+  // 로그아웃이 필요할 때 alert 창을 띄워 알림
+  alert("accessToken이 만료되어 로그아웃을 수행합니다");
+
+  // "Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
+  try {
+      const logOutString = await KakaoLogins.logout(); // 카카오 로그아웃 수행
+      if (logOutString != null) {
+          console.log(logOutString); // 받아온 정보 log에 찍어보기
+          await EncryptedStorage.removeItem('refreshToken'); // refreshToken 삭제
+          await AsyncStorage.removeItem('accessToken'); // accessToken 삭제
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0, //Navigation Stack에 'LoginScreen'만 남도록 설정
+              routes: [
+                {name: 'LoginScreen'}
+              ]
+            })
+          );
+      } else {
+          console.log('로그아웃 정상적으로 안됨!');
+      }
+  } catch (error) {
+      console.log(error);
+  }
+}
+
 //유저의 특정 날짜에 대한 식단 정보를 받아오기 위한 fetchMealInfo
-async function fetchMealInfo(eatingTime: string, formattedDate: string) {
+async function fetchMealInfo(eatingTime: string, formattedDate: string, navigation) {
 
   let mealType: string = null;
   
@@ -73,8 +105,14 @@ async function fetchMealInfo(eatingTime: string, formattedDate: string) {
           }
       }
   } catch (error) {
+    if(error.response?.status === 401) {
+      console.log("인증 에러: 401 - 자동 로그아웃 수행");
+      await autoLogOut(navigation); //자동 로그아웃 함수 호출
+      return null;  // 자동 로그아웃 이후 null 반환
+    } else {
       console.error('get 요청 중 에러 발생: ', error)
       return null;
+    }
   }
 }
 
@@ -114,24 +152,25 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
     let [checkNull, setCheckNull] = useState(true); //section이 펼쳐질 때 확인해야 하는 값(불러온 게 null이면 true, 아니면 false) 
 
     //markedDate가 변할 때마다 sectionFolded는 true로 설정되어야 한다. (=선택한 날짜가 바뀔 때마다 카드 섹션은 접혀야 한다.)
+    //그리고, simplifiedData 또한 초기화 해야 한다.
     useEffect(() => {
       setIsSectionFolded(true);
+      setSimplifiedData(null);
     },[markedDate]);
 
-
     // simplifiedData가 변경될 때마다 로그를 출력하는 useEffect 추가
-    useEffect(() => {
-      if (simplifiedData) {
-        console.log('간단해진 식단 정보: ', simplifiedData);
-      }
-    }, [simplifiedData]);
+    // useEffect(() => {
+    //   if (simplifiedData) {
+    //     console.log('간단해진 식단 정보: ', simplifiedData);
+    //   }
+    // }, [simplifiedData]);
 
     //section을 toggle할 때 사용하는 함수
     async function toggleSection(eatingTime: string, markedDate: string) {
       const parsedDate = parseISO(markedDate);
       const formattedDate = format(parsedDate, 'yyyy-MM-dd');  // 원하는 형식으로 변환
       if(isSectionFolded) { 
-        let response = await fetchMealInfo(eatingTime, formattedDate) //section을 펼칠 땐 식단 정보를 가져와야 한다 (await 키워드를 활용해 비동기 함수가 끝난 후 데이터가 출력하도록 코드를 수정해야 함)
+        let response = await fetchMealInfo(eatingTime, formattedDate, navigation) //section을 펼칠 땐 식단 정보를 가져와야 한다 (await 키워드를 활용해 비동기 함수가 끝난 후 데이터가 출력하도록 코드를 수정해야 함)
 
         console.log('formattedDate: ', formattedDate);
         console.log('서버에서 가져온 게 뭔데?: ', response);
@@ -142,15 +181,17 @@ function MainScreenSection({eatingTime, navigation, toggleBottomSheet, markedDat
           setSimplifiedData(makeSimpleFoodData(response)); //간단하게 가공한 정보를 simplifiedData 값으로 설정
           setTotalCalories(calculateTotalCalories(response)) //로컬(section 컴포넌트)에 칼로리를 계산하여 저장한다
           setCheckNull(false); //이 값이 false가 됨으로써, section을 펼칠 것이다
+          
         }
         setMealInfoDetail(response) //서버에서 불러온 전체 정보도 저장한다 (세부 영양성분 보여줄 때 필요하거든 / props로 받은 setMealInfo() state 변경함수 활용)
+        
       }
       setIsSectionFolded(!isSectionFolded); //section을 접었다 폈다 하는 state 변화 주기
     } 
 
     //간단한 식단 정보(simplifiedData)를 출력하는 메소드
     function returnMealInfo() {
-      if(!checkNull) { //식단 정보가 불려와 졌으면
+      if(simplifiedData !== null) { //식단 정보가 불려와 졌으면
         return (
           <>
           {/* 식단 정보 출력 */}

@@ -23,7 +23,7 @@ import GenderIcon from '../assets/svg/wc.svg';
 import ManIcon from '../assets/svg/man_4.svg';
 import WomanIcon from '../assets/svg/woman_2.svg';
 
-function FixBasicDataScreen({route, navigation, appState}) {
+function FixBasicDataScreen() {
 
     //실험용 코드 (redux-toolkit으로 accountInfo를 전역적으로 관리하고 있음)
     let accountInfo = useSelector((state: RootState) => state.accountInfo);

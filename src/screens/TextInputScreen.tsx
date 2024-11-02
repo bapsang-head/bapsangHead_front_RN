@@ -184,7 +184,7 @@ function TextInputScreen(){
                   {name: 'LoginScreen'}
                 ]
               })
-            )
+            );
         } else {
             console.log('로그아웃 정상적으로 안됨!');
         }
@@ -455,7 +455,15 @@ function TextInputScreen(){
       // subComponentPageNum이 2인 경우에는 analysisResult가 업데이트된 후 페이지를 넘어가게 해야 함
       setIsFixingCompleted(true); //'완료' 버튼을 눌렀다는 signal을 true로 바꾼다
     } else if(subComponentPageNum === 4){ // 식단 저장이 완료 되었다는 페이지(마지막 컴포넌트)에서 '완료' 버튼을 누를 경우
-      nav.goBack();
+      //Stack을 초기화한다
+      nav.dispatch(
+        CommonActions.reset({
+          index: 0, //Navigation Stack에 'MainScreen'만 남도록 설정 
+          routes: [
+            {name: 'TabNavigator'}
+          ]
+        })
+      );
     } else {
       // subComponentPageNum이 2가 아닌 경우는 그냥 바로 다음 subComponent 페이지로 이동하도록 설계
       updateStates('forward'); 
