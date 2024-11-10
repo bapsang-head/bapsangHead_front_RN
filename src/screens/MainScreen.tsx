@@ -1,6 +1,6 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, Dimensions, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, runOnJS } from 'react-native-reanimated';
@@ -225,7 +225,7 @@ function MainScreen({navigation}) {
           {/* 드래그가 가능한 부분(상단 부분)을 설정한다 */}
           <GestureDetector gesture={panGesture}>
             <View style={MainStyles.draggableArea}>
-              <Text style={MainStyles.dragText}>Drag Area</Text>
+              <View style={MainStyles.dragHandle}/>
             </View>
           </GestureDetector>
           {/* mealInfo가 null이 아니면 DetailBottomSheetModal을 렌더링 */}
@@ -297,7 +297,7 @@ const MainStyles = StyleSheet.create({
   },
   draggableArea: {
     height: 40,  // Only the top 40px is draggable
-    backgroundColor: '#ccc',
+    backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
     borderTopLeftRadius: 20,
@@ -313,6 +313,14 @@ const MainStyles = StyleSheet.create({
     alignItems: 'center', // 가로 중앙 정렬
     padding: 20, // 여백 추가
     backgroundColor: '#f0f0f0', // 배경색을 연한 회색으로 설정
+  },
+  dragHandle: {
+    width: 40,           // adjust width to match the design
+    height: 5,           // adjust height to match the design
+    borderRadius: 2.5,   // half of height for a rounded pill-like shape
+    backgroundColor: 'gray',
+    alignSelf: 'center', // centers the handle horizontally
+    marginVertical: 12,  // adds vertical spacing
   },
 });
 

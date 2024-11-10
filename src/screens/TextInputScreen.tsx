@@ -213,7 +213,7 @@ function TextInputScreen(){
               'Content-Type': 'application/json;charset=UTF-8',
               'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
           },
-          timeout: 5000, //5초 후 요청이 응답하지 않으면 Timeout
+          timeout: 30000, //30초 후 요청이 응답하지 않으면 Timeout
           signal: controller.signal, //AbortController의 signal 전달
         })
 
@@ -244,7 +244,7 @@ function TextInputScreen(){
         }
       //error code가 timeout과 관련한 경우이면..
       } else if(error.code === 'ECONNABORTED') {
-        console.warn('10초가 지났습니다. 재시도 중...', retryCount + 1);
+        console.warn('30초가 지났습니다. 재시도 중...', retryCount + 1);
 
         //재시도 횟수를 제한할 수 있다. 여기서는 우선 6번으로 제한함
         if(retryCount < 6) {
@@ -316,20 +316,7 @@ function TextInputScreen(){
         }
       
       //요청이 30초 이상 걸리는 경우에도 재시도를 해야 한다 (없애기)
-      } 
-      // else if (error.code === 'ECONNABORTED') {
-      //   console.warn('5초가 지났습니다. 재시도 중...', retryCount + 1);
-      //   if (retryCount < 8) {
-      //     return new Promise((resolve) => {
-      //       setTimeout(() => {
-      //         resolve(userInputAnalysis_Second(retryCount + 1, controller));
-      //       }, 1000);
-      //     });
-      //   } else {
-      //     console.error('재시도 횟수를 초과했습니다.');
-      //   }
-      // }
-      else if(error.response?.status === 401) {
+      } else if(error.response?.status === 401) {
         console.log("인증 에러: 401 - 자동 로그아웃 수행");
         await autoLogOut(); //자동 로그아웃 함수 호출
       } else {
@@ -411,7 +398,7 @@ function TextInputScreen(){
       }
     }
 
-    //음식 입력 현황이 변했으므로, 마지막 과정에서 서버로부터 입력 현황 정보를 다시 받아와서 axios를 업데이트 해야 한다
+    //음식 입력 현황이 변했으므로, 마지막 과정에서 서버로부터 입력 현황 정보를 다시 받아와서 redux 저장소의 해당 정보를 업데이트 해야 한다
     try {
       let markedMonth = format(new Date(markedDate), 'yyyy-MM'); //기준 날짜를 YYYY-MM 형식으로 formatting
 
@@ -431,6 +418,7 @@ function TextInputScreen(){
 
           // 받아온 데이터를 redux에 각각 저장 (setMealInput 상태변경 함수는 직접 import했다)
           setMealInput({ month: markedMonth, mealData: response.data });
+          console.log("받아온 정보: ", response.data)
           console.log(markedMonth, '기준으로 잘 불러옴!');
       }
     } catch (error) {

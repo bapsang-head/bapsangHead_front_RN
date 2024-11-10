@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import {styles} from '../styles/styles';
 
 import RemoveIcon from '../assets/svg/remove.svg'
+import NoticeIcon from '../assets/svg/campaign.svg'
 
 //1차 분석 후 나오는 UI
 function FixingInput(props) {
@@ -133,7 +134,7 @@ function FixingInput(props) {
 
     return (
         <>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={true}>
             {/* 추후, 분셕 결과를 불러올 때, 분석한 결과만큼 찍어내야 하는 View */}
             { textInput }
             <TouchableOpacity style={{marginTop: 20}} onPress={addDataElement}>
@@ -142,9 +143,19 @@ function FixingInput(props) {
                     <Text style={{fontSize: 14, fontWeight: 'bold'}}>입력내용 추가하기</Text>
                 </View>
             </TouchableOpacity>
+            <View style={{alignItems: 'flex-start', backgroundColor: '#f0ffd4', borderRadius: 10, paddingVertical: 16, paddingHorizontal: 16, marginTop: 16}}>
+                <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
+                    <NoticeIcon height={28} width={28}/>
+                    <Text style={{fontWeight: 'bold', fontSize: 18, marginLeft: 4}}>참고사항!</Text>
+                </View>
+                <Text style={{fontSize: 14, lineHeight: 20}}>
+                    입력내용 분석 결과가 정확하지 않을 수 있어요.{"\n"}
+                    정확하지 않은 경우, 결과를 수정해 주세요.{"\n"}
+                    최종 내용을 바탕으로 영양성분 분석을 진행할게요.
+                </Text>
+            </View>
         </ScrollView>
         </>
-        
     )
 }
 

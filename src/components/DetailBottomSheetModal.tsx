@@ -16,7 +16,7 @@ function calculateIngredientsDetail(mealInfo: any) {
         calorie: Math.round((item.calorie) * ((item.gram) / 100) * item.count),
         carbohydrate: Math.round((item.carbohydrate) * ((item.gram) / 100) * item.count),
         protein: Math.round((item.protein) * ((item.gram) / 100) * item.count),
-        fat: Math.round((item.protein) * ((item.gram) / 100) * item.count)
+        fat: Math.round((item.fat) * ((item.gram) / 100) * item.count)
     }));
 
     //총 칼로리, 탄수화물, 단백질, 지방 값을 계산한다(reduce 함수 활용)
@@ -110,7 +110,7 @@ function DetailBottomSheetModal({mealInfoDetail}) {
 const styles = StyleSheet.create({
     modalContainer: {
         marginHorizontal: 20,
-        marginBottom: 60,
+        marginBottom: 52,
         backgroundColor: '#fff',
     },
     detailContainer: {

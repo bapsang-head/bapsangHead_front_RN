@@ -105,7 +105,6 @@ function renderWeekCalendar(
                             style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
                             {
                                 //선택한 날짜인 경우(전역적으로 관리 중인 markedDate인 경우) 마커를 표시하고, 아니면 그냥 text만 표시
-                                //day와 markedDate를 직접적으로 비교하게 되면, 시간에서 미세하게 차이가 발생하므로, 아래와 같이 비교해야 함
                                 <View style={{justifyContent: 'center', alignItems: 'center'}}>
                                     <View style={[styles.calendarMarker, markerStyle]}>
                                         <Text style={[style, {fontSize: 24}]}>{getDate(day)}</Text>
@@ -132,6 +131,8 @@ async function fetchMealDataForWeek(
     //Promise 객체와 map 함수를 이용해서 지속 요청을 진행할 것임
     const dataPromises = weekCalendarDays.map(async (day) => {
         const month = format(day, 'yyyy-MM');
+        const dayFormatted = format(day, 'yyyy-MM-dd');
+
         if (!mealData[month]) { //해당 월의 mealData가 redux 저장소에 없다면
             const accessToken = await AsyncStorage.getItem('accessToken');
             try {
@@ -142,13 +143,15 @@ async function fetchMealDataForWeek(
                     }
                 });
                 dispatch(setMealInput({ month: month, mealData: response.data }));
-                console.log('음식 입력 현황을 불러오기 위해 서버 요청을 함!');
-                return response.data[month]?.find((meal) => meal.date === format(day, 'yyyy-MM-dd'));
+                console.log('서버에서 데이터를 가져와 Redux에 저장한 후 로컬에서 사용합니다.');
+
+                // 가져온 데이터를 day에 맞춰 필터링하여 바로 반환
+                return response.data.find((meal: any) => meal.date === dayFormatted);
             } catch (error) {
                 console.error('데이터를 가져오는 중 에러 발생: ', error);
             }
         } else { //해당 월의 mealData가 redux 저장소에 있다면
-            console.log('음식 입력 현황을 redux에서 불러옴!', format(day, 'yyyy-MM-dd'));
+            console.log('Redux에서 기존 데이터를 불러옵니다: ', format(day, 'yyyy-MM-dd'));
             return mealData[month]?.find((meal) => meal.date === format(day, 'yyyy-MM-dd'));
         }
     });
@@ -200,13 +203,13 @@ function CalendarFolded(props: any) {
     useEffect(() => {
         //한 주치 날짜를 만들고, 입력 현황을 불러오는 역할을 하는 함수 fetchWeekData
         const fetchWeekData = async () => {
-
             const days = makeWeekCalendarDays(props.pointDate); //달력에 들어간 주간 달력 날짜들을 만든다(pointDate 기준)
             setWeekCalendarDays(days);
+
             const mealData = await fetchMealDataForWeek(days, mealInputData, dispatch); //한 주간 관련해서 입력 현황을 불러온다(필요시 서버 요청도 함)
             setMealDataByDate(mealData);
-
         };
+
         fetchWeekData();
         scrollEnabledRef.current = true; //스크롤 다시 활성화
 
@@ -218,8 +221,6 @@ function CalendarFolded(props: any) {
         //'onLayout' 이벤트 대신 'FlatList'가 처음 렌더링될 때 초기 'offsetX' 값을 정확히 설정해야 한다.
         prevOffsetX.current = contentWidth * INITIAL_INDEX;
 
-        //calendar가 펼쳐진 상태에서 접힌 상태로 바뀌게 되면, marked된 달력을 기준으로 띄워야 하므로, pointDate도 바꿔야 함
-        // props.setPointDate(new Date(markedDate));
     }, []); //빈 배열을 dependency로 전달하여 한 번만 실행
 
     //좌우로 Scroll 하는 것에 관한 함수 (useCallback으로 Memoization한다.)
@@ -280,10 +281,12 @@ function CalendarFolded(props: any) {
                 {/* FlatList를 이용해서 날짜 무한 스크롤을 구현한다, UI 디자인 보기 좋게 하기 위해서.. 'marginTop: 8, height: 44' 옵션 추가.. */}
                 {/* 해당 구역에선 flex로 비율값을 맞추기 보단, 고정적인 dp 값으로 layout 구성이 옳다고 판단 */}
 
+
                 <FlatList
                     style={{ marginTop: 8 }}
                     ref={flatListRef}
                     data={weekDataRef.current}
+                    extraData={mealDataByDate} // mealDataByDate가 변경될 때 FlatList가 리렌더링됨
                     renderItem={({ item }) =>
                         renderWeekCalendar(
                             makeWeekCalendarDays(item.date), //각 주차별 날짜 배열을 생성하여 렌더링

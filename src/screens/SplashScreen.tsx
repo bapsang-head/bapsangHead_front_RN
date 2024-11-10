@@ -65,7 +65,6 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
             })
 
             console.log('accessToken: ', accessToken);
-            console.log('get 요청 날라온 응답: ', response);
 
             //response로 넘어온 정보 redux에 저장
             dispatch(setName(response.data.name));

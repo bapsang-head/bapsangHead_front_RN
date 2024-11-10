@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import {styles} from '../styles/styles';
 import SaveCompleteIcon from '../assets/svg/add_task.svg'
+import DetailBottomSheetModal from './DetailBottomSheetModal';
 
 
 //2차 분석 완료 후 '식단 저장이 완료되었습니다' 화면 Component
