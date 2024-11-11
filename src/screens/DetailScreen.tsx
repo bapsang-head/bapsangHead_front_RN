@@ -8,10 +8,12 @@ import * as Progress from 'react-native-progress';
 
 import { RootState } from '../store';
 
+import { useIsFocused, CommonActions, useNavigation } from '@react-navigation/native'; //해당 화면이 포커스 되었을 때를 감지하기 위한 훅 useIsFocused
+
 import { 
     format,
     subWeeks,
-    getDay,
+    subDays,
     addDays,
     getMonth,
     getDate
@@ -20,6 +22,13 @@ import {
 import {
     LineChart,
   } from "react-native-chart-kit";
+
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
+//해당 화면에선 로그아웃을 위해 필요한 import들
+import EncryptedStorage from 'react-native-encrypted-storage';
+import * as KakaoLogins from "@react-native-seoul/kakao-login";
 
 //7일 전까지의 날짜를 배열로 만든다
 function makeDayList()
@@ -51,10 +60,51 @@ interface MealData {
     식단입력여부: string;
 }
 
+//accessToken 만료로 인한 오류 발생 시 자동 로그아웃 수행을 위한 autoLogOut 함수
+async function autoLogOut(navigation) {
+    // 로그아웃이 필요할 때 alert 창을 띄워 알림
+    alert("accessToken이 만료되어 로그아웃을 수행합니다");
+  
+    // "Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
+    try {
+        const logOutString = await KakaoLogins.logout(); // 카카오 로그아웃 수행
+        if (logOutString != null) {
+            console.log(logOutString); // 받아온 정보 log에 찍어보기
+            await EncryptedStorage.removeItem('refreshToken'); // refreshToken 삭제
+            await AsyncStorage.removeItem('accessToken'); // accessToken 삭제
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0, //Navigation Stack에 'LoginScreen'만 남도록 설정
+                routes: [
+                  {name: 'LoginScreen'}
+                ]
+              })
+            );
+        } else {
+            console.log('로그아웃 정상적으로 안됨!');
+        }
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+// 총 칼로리만 계산하는 함수
+function calculateTotalCalories(mealInfo: any) {
+    const totalCalories = mealInfo.reduce((total: number, item: any) => {
+        const calorie = Math.round(item.calorie * (item.gram / 100) * item.count);
+        return total + calorie;
+    }, 0);
+
+    return totalCalories;
+}
+
 
 //'데이터 분석' 페이지
 function DetailScreen() {
     console.log("Detail rendering");
+
+    const isFocused = useIsFocused(); //여기로 왔을 경우.. 포커싱
+    let navigation = useNavigation(); //자동 로그아웃을 위한.. navigation 객체 하나 선언
 
     let [currentDate, setCurrentDate] = useState(new Date()); // 초기값 현재 달 (state는 Date 객체로 관리 후, 필요한 곳에 적절히 활용 예정)
     let [parentWidth, setParentWidth] = useState(0); //부모 컴포넌트의 너비를 받아오기 위한 State      
@@ -63,56 +113,146 @@ function DetailScreen() {
     let [dayOfSomeInputs, setDayOfSomeInputs] = useState(0); //일부만 입력한 날
     let [dayOfNothingInputs, setDayOfNothingInputs] = useState(0); //아무것도 입력하지 않은 날
 
+    let [dayList, setDayList] = useState(makeDayList());
+    let [caloriesChartData, setCaloriesChartData] = useState({ //기본값을 우선 지정은 해 놓는다
+        labels: dayList,
+        datasets: [
+            {
+                data: [1000, 1000, 1000, 1000, 1000, 1000, 1000]
+            }
+        ]
+    });
+
+    let activityMetabolism = Math.round(useSelector((state: RootState) => state.accountInfo.activityMetabolism)); //redux 저장소에 저장되어 있는 활동대사량 값 가져오기
+    let [averageEatenCaloriesOfWeek, setAverageEatenCaloriesOfWeek] = useState(0); //평균 섭취 칼로리
+    
     //특정한 월의 식단 입력 데이터만 가져온다
     const monthlyMealData: MealData[] = useSelector(
         (state: RootState) => state.mealInput.data[format(currentDate, 'yyyy-MM')] || []
     ); //redux 저장소에 있는 정보를 불러올 것이다
 
-    //monthlyMealData 값이 바뀔 때마다 해당 구문을 수행한다
-    useEffect(() => {
+    //오늘 먹은 칼로리를 계산하는 메소드 calculateTodayEatenCalories()
+    async function calculateTodayEatenCalories(date: string): Promise<number> {
+        const mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER'];
+        let totalTodayEatenCalories = 0;
 
-        let countOf_NONE = 0;
-        let countOf_ENTERING = 0;
-        let countOf_COMPLETE = 0;
-
-        //map 함수를 이용해서 불러온 식단 입력 정보(monthlyMealData)를 순회하며 값 확인
-        monthlyMealData.map((meal) => {
-            if(meal.식단입력여부 === 'NONE'){
-                countOf_NONE = countOf_NONE + 1;
-            } else if(meal.식단입력여부 === 'ENTERING') {
-                countOf_ENTERING = countOf_ENTERING + 1;
-            } else if(meal.식단입력여부 === 'COMPLETE') {
-                countOf_COMPLETE = countOf_COMPLETE + 1;
+        try {
+            const accessToken = await AsyncStorage.getItem('accessToken'); //accessToken을 우선 가져온다
+            if(!accessToken) //accessToken이 존재하지 않다면
+            {
+                console.error('Access Token이 존재하지 않습니다');
+                return null;
             }
-        })
 
-        console.log("세팅한 값: ", countOf_NONE, countOf_ENTERING, countOf_COMPLETE);
+            //mealTypes 배열을 순회하며 요청을 지속해서 날린다
+            for(const mealType of mealTypes) {
+                const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/date/${date}/type/${mealType}`;
+                const response = await axios.get(url, {
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                });
 
-        //해당하는 값들로 set
-        setDayOfNothingInputs(countOf_NONE);
-        setDayOfSomeInputs(countOf_ENTERING);
-        setDayOfAllInputs(countOf_COMPLETE);
+                if (Array.isArray(response.data) && response.data.length === 0) { //응답 배열이 비어 있다면..
+                    console.log(`날짜 ${date}, 식사 타입 ${mealType}에 대한 응답 배열이 비어 있습니다.`);
+                    continue;
+                }
 
-    }, [monthlyMealData])
+                totalTodayEatenCalories += calculateTotalCalories(response.data); //총 칼로리 계산
+            }
+
+        } catch(error) {
+            if(error.response?.status === 401) {
+                console.log("인증 에러: 401 - 자동 로그아웃 수행");
+                await autoLogOut(navigation); //자동 로그아웃 함수 호출
+                return null;  // 자동 로그아웃 이후 null 반환
+            } else {
+                console.error('오늘의 칼로리를 계산하는 중 에러가 발생했습니다:', error);
+                return null;
+            }
+        }
+
+        return totalTodayEatenCalories;
+    }
+
+    //calculateTodayEatenCalories()를 이용해서 주별로 먹은 칼로리를 계산하는 메소드 calculateWeekEatenCalories()
+    async function calculateWeekEatenCalories(endDate: string): Promise<number[] | null> {
+        let caloriesValueArray: number[] = []; // 각 요일별 칼로리를 저장할 배열
+        let totalCalories = 0; //평균을 계산하기 위해 모든 요일의 칼로리를 합산
+    
+        for (let i = 0; i < 7; i++) {
+            const date = format(subDays(new Date(endDate), i), 'yyyy-MM-dd');
+            const dailyCalories = await calculateTodayEatenCalories(date);
+            
+            if (dailyCalories !== null) {
+                caloriesValueArray.push(dailyCalories);
+                totalCalories += dailyCalories; //평균을 내기 위해 우선은 각 요일별 섭취 칼로리를 다 더한다
+            } else {
+                caloriesValueArray.push(0); // dailyCalories가 null인 경우 0으로 설정
+            }
+        }
+
+        // 평균 계산 후 상태 업데이트(정수로 반올림하기 위해 Math.round 함수 사용)
+        const averageCalories = Math.round(totalCalories / 7);
+        setAverageEatenCaloriesOfWeek(averageCalories);
+    
+        return caloriesValueArray.reverse(); // 배열을 반대로 하여 시작 날짜부터 순서대로 반환
+    }
+
+    //해당 화면이 포커싱될 때마다 수행한다 (isFocused 훅 사용)
+    useEffect(() => {
+        if(isFocused) //useEffect 내부에서 isFocused가 true일 때만 로직을 실행하도록 조건 추가 / 해당 화면이 실제로 focus될 때만 아래의 구문을 수행하도록 함
+        {
+            async function fetchWeekCaloriesInfo() {
+                try {
+                    // 각 요일별 칼로리 총합을 계산하고 상태로 저장
+                    const responseArray = await calculateWeekEatenCalories('2024-11-15'); // endDate를 원하는 날짜로 설정 (현재는 하드코딩 해놓음, 추후 format(currentDate, 'yyyy-MM-dd')로 바꿀 것임)
+                    setCaloriesChartData({labels: dayList, datasets: [{data: responseArray}]})
+    
+    
+                } catch (error) {
+                    console.error("요일별 칼로리 계산 중 오류 발생: ", error);
+                }
+            }
+    
+            let countOf_NONE = 0;
+            let countOf_ENTERING = 0;
+            let countOf_COMPLETE = 0;
+    
+            //map 함수를 이용해서 불러온 식단 입력 정보(monthlyMealData)를 순회하며 값 확인
+            monthlyMealData.map((meal) => {
+                if(meal.식단입력여부 === 'NONE'){
+                    countOf_NONE = countOf_NONE + 1;
+                } else if(meal.식단입력여부 === 'ENTERING') {
+                    countOf_ENTERING = countOf_ENTERING + 1;
+                } else if(meal.식단입력여부 === 'COMPLETE') {
+                    countOf_COMPLETE = countOf_COMPLETE + 1;
+                }
+            })
+    
+            console.log("세팅한 값: ", countOf_NONE, countOf_ENTERING, countOf_COMPLETE);
+    
+            //해당하는 값들로 set
+            setDayOfNothingInputs(countOf_NONE);
+            setDayOfSomeInputs(countOf_ENTERING);
+            setDayOfAllInputs(countOf_COMPLETE);
+    
+            // 비동기 함수 호출
+            fetchWeekCaloriesInfo();
+        }
+    }, [isFocused])
 
     
 
-    let dayList = makeDayList(); //7일 전까지의 날짜를 배열로 만든다
+    
 
     // 입력 현황을 퍼센트로 계산, NaN일 경우 0으로 설정
     let statusForPercent = dayOfAllInputs + dayOfNothingInputs + dayOfSomeInputs > 0 
         ? Math.round((dayOfAllInputs / (dayOfAllInputs + dayOfNothingInputs + dayOfSomeInputs)) * 100) 
         : 0;
     
-    //Bar 차트 데이터 설정
-    let data = {
-        labels: dayList,
-        datasets: [
-            {
-                data: [2000, 2000, 1300, 3000, 3200, 2000, 2500]
-            }
-        ]
-    };
+    
 
     //차트 Config 설정 값 chartConfig 구성
     const chartConfig = {
@@ -206,7 +346,7 @@ function DetailScreen() {
                     <View style={{justifyContent: 'center'}}>
                         <LineChart
                             style={graphStyle}
-                            data={data}
+                            data={caloriesChartData}
                             width={parentWidth}
                             height={200}
                             yAxisLabel=""
@@ -222,14 +362,14 @@ function DetailScreen() {
                                 <View style={[styles.circleStyleInInputStatus, {backgroundColor: '#FFA07A'}]}/>
                                 <Text>나의 활동대사량</Text>
                             </View>
-                            <Text>{3250}kcal</Text>    
+                            <Text>{activityMetabolism}kcal</Text>    
                         </View>
                         <View style={styles.rowInDetailPage}>
                             <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                 <View style={[styles.circleStyleInInputStatus, {backgroundColor: '#6495ED'}]}/>
                                 <Text>평균 섭취 칼로리</Text>
                             </View>
-                            <Text>{2240}kcal</Text>    
+                            <Text>{averageEatenCaloriesOfWeek}kcal</Text>    
                         </View>
                     </View>
                 </View>

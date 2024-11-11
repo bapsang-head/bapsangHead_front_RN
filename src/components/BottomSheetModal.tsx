@@ -19,19 +19,18 @@ function BottomSheetModal(props) {
           <View style={styles.progressContainer}>
             {/* Progress Bar 추가 (react-native-progress 라이브러리 활용) */}
             <Progress.Bar 
-              progress={props.TodayEatenCalories/props.MyActivity} 
+              progress={props.MyActivity ? props.TodayEatenCalories/props.MyActivity : 0} //기본값을 설정해서 NaN 방지 
               width={modifiedBarWidth}
               height={10}
-              
-              animationConfig={{bounciness: 20}} 
+              animationConfig={{bounciness: 10}} 
               borderWidth={0}//테두리 없애기
               unfilledColor='lightgrey'//안 채워진 곳에 대한 색상 설정
-              color={'green'}
+              color={props.TodayEatenCalories / props.MyActivity > 1 ? '#FFCED7' : '#008000'} // 1을 넘을 경우 빨간색으로 표시
               borderRadius={10}/>
           </View>
           <View style={styles.row}>
             <Text style={styles.modalBottom}>현재 남은 섭취 칼로리</Text>
-            <Text style={styles.modalBottom}>{(props.MyActivity)-(props.TodayEatenCalories)}kcal</Text>
+            <Text style={styles.modalBottom}>{Math.max(0, props.MyActivity - props.TodayEatenCalories)}kcal</Text>
           </View>
       </View>
   );

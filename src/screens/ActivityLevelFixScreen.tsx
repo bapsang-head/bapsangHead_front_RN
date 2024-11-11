@@ -2,9 +2,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { View, Text, TextInput, TouchableOpacity, Dimensions} from 'react-native';
-import { Calendar, CalendarList, LocaleConfig, ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
 import { styles } from '../styles/styles';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
@@ -18,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
-import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
+import { setActivityLevel, calculateActivityMetabolism } from "../slices/accountInfoSlice";
 
 //세 번째 설정 화면
 function ActivityLevelFixScreen({route, navigation, appState}) {
@@ -61,9 +59,11 @@ function ActivityLevelFixScreen({route, navigation, appState}) {
                 }
             );
 
-            //성공적으로 요청이 완료되었을 경우의 처리
-            console.log('성공적으로 활동량 수정 완료되었습니다: ', response.data);
+            
             dispatch(setActivityLevel(selectedActivityLevel)); //redux에 저장되어 있는 activityLevel 정보 수정
+            dispatch(calculateActivityMetabolism());
+            //성공적으로 요청이 완료되었을 경우의 처리
+            console.log('성공적으로 활동량 수정 완료되었습니다, 이에 따라 활동 대사량 값도 바뀝니다: ', response.data);
             nav.goBack();
         } catch (error) {
             //요청 실패 시의 에러 처리

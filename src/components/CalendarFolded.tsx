@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from "../store";
 import { setMarkedDate } from '../slices/markedDateSlice'
 
+
 import { 
     format,
     startOfWeek,
@@ -18,12 +19,39 @@ import {
     } from 'date-fns'; //달력을 직접 만들기 위한 date-fns 라이브러리 import!
 
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import EncryptedStorage from 'react-native-encrypted-storage';
+import KakaoLogins from '@react-native-seoul/kakao-login';
+
+import { useNavigation, CommonActions } from '@react-navigation/native'
 import axios from 'axios'
 import { setMealInput } from '../slices/mealInputSlice'; // mealInputSlice 파일에서 setMealInput 액션 가져오기
 
 const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
+
+async function autoLogOut(navigation) {
+    alert("accessToken이 만료되어 로그아웃을 수행합니다");
+  
+    try {
+      const logOutString = await KakaoLogins.logout();
+      if (logOutString != null) {
+        console.log(logOutString);
+        await EncryptedStorage.removeItem('refreshToken');
+        await AsyncStorage.removeItem('accessToken');
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'LoginScreen' }],
+          })
+        );
+      } else {
+        console.log('로그아웃 정상적으로 안됨!');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
 //redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
 function makeMealInputMarking(mealDataForDate: any) {
@@ -122,37 +150,35 @@ function renderWeekCalendar(
 
 // 날짜별 meal input 데이터를 서버에서 가져오는 함수
 //주간 달력에서는 구분이 애매하므로, 주간 달력에 나와있는 날짜들의 month 값을 일일이 갖고 와서 마킹할 수 있도록 해야 한다
-//만약 해당 월의 데이터가 없으면, 월간 달력에서처럼 서버 요청을 해야겠죠?
-async function fetchMealDataForWeek(
-    weekCalendarDays: Date[], 
-    mealData: any, 
-    dispatch: AppDispatch
-) {
+//해당 구역에서는, 로직의 애매함으로 인해 모두 서버에서 데이터를 가져와서 뿌리는 식으로 진행할 것이다 (월간 달력에서는 redux에 저장할 예정)
+async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation) {
     //Promise 객체와 map 함수를 이용해서 지속 요청을 진행할 것임
     const dataPromises = weekCalendarDays.map(async (day) => {
         const month = format(day, 'yyyy-MM');
         const dayFormatted = format(day, 'yyyy-MM-dd');
 
-        if (!mealData[month]) { //해당 월의 mealData가 redux 저장소에 없다면
-            const accessToken = await AsyncStorage.getItem('accessToken');
-            try {
-                const response = await axios.get(`http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${month}`, {
-                    headers: {
-                        'Content-Type': 'application/json;charset=UTF-8',
-                        'Authorization': `Bearer ${accessToken}`,
-                    }
-                });
-                dispatch(setMealInput({ month: month, mealData: response.data }));
-                console.log('서버에서 데이터를 가져와 Redux에 저장한 후 로컬에서 사용합니다.');
+        const accessToken = await AsyncStorage.getItem('accessToken');
+        try {
+            const response = await axios.get(`http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${month}`, {
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Authorization': `Bearer ${accessToken}`,
+                }
+            });
+            console.log('서버에서 데이터를 가져와 달력에 뿌리겠습니다.');
 
-                // 가져온 데이터를 day에 맞춰 필터링하여 바로 반환
-                return response.data.find((meal: any) => meal.date === dayFormatted);
-            } catch (error) {
+            // 가져온 데이터를 day에 맞춰 필터링하여 바로 반환
+            return response.data.find((meal: any) => meal.date === dayFormatted);
+        } catch (error) {
+            if(error.response?.status === 401) {
+                console.log("인증 에러: 401 - 자동 로그아웃 수행");
+                await autoLogOut(navigation); //자동 로그아웃 함수 호출
+                return null;  // 자동 로그아웃 이후 null 반환
+              } else {
                 console.error('데이터를 가져오는 중 에러 발생: ', error);
-            }
-        } else { //해당 월의 mealData가 redux 저장소에 있다면
-            console.log('Redux에서 기존 데이터를 불러옵니다: ', format(day, 'yyyy-MM-dd'));
-            return mealData[month]?.find((meal) => meal.date === format(day, 'yyyy-MM-dd'));
+                return null;
+              }
+            
         }
     });
 
@@ -161,6 +187,8 @@ async function fetchMealDataForWeek(
 
 //접힌 캘린더 또한, UI적으로 라이브러리로는 내가 원하는 Calendar를 구현할 수 없음, 직접 구현할 것이다
 function CalendarFolded(props: any) {   
+
+    const navigation = useNavigation();
 
     let weekMarking = ["일", "월", "화", "수", "목", "금", "토"]; //요일을 표시하기 위한 데이터
 
@@ -175,7 +203,7 @@ function CalendarFolded(props: any) {
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
 
     //mealInputData 관련 정보를 가져온다
-    let mealInputData = useSelector((state: RootState) => state.mealInput.data);
+    // let mealInputData = useSelector((state: RootState) => state.mealInput.data);
 
     console.log('CalendarFolded 렌더링: ', props.pointDate);
 
@@ -206,7 +234,7 @@ function CalendarFolded(props: any) {
             const days = makeWeekCalendarDays(props.pointDate); //달력에 들어간 주간 달력 날짜들을 만든다(pointDate 기준)
             setWeekCalendarDays(days);
 
-            const mealData = await fetchMealDataForWeek(days, mealInputData, dispatch); //한 주간 관련해서 입력 현황을 불러온다(필요시 서버 요청도 함)
+            const mealData = await fetchMealDataForWeek(days, navigation); //한 주간 관련해서 입력 현황을 불러온다(필요시 서버 요청도 함)
             setMealDataByDate(mealData);
         };
 

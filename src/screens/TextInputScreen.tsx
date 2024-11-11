@@ -21,6 +21,10 @@ import { setMealInput } from '../slices/mealInputSlice';
 
 import * as KakaoLogins from "@react-native-seoul/kakao-login"; //accessToken 만료 시 카카오 로그아웃을 자동으로 수행해야 함
 
+//redux-toolkit을 사용하기 위한 import
+import { useDispatch } from "react-redux"
+import { RootState, AppDispatch } from '../store'
+
 //StackNavigator의 ParamList 타입을 정의한다
 //TypeScript에서 발생하는 route.params 객체에 eatingTime과 markedDate가 없을 수도 있다고 예상할 수 있음.
 //따라서 아래와 같이 형식을 명시해 주어야 함
@@ -87,6 +91,9 @@ function TextInputScreen(){
   //route.paramas를 사용해서 navigation 사이에서 파라미터를 받을 것이다 (route 객체의 타입을 명시적으로 정의한다)
   const route = useRoute<RouteProp<RootStackParamList, 'TextInputScreen'>>();
   const { eatingTime, markedDate } = route.params; //넘겨받은 파라미터를 access 한다
+
+  //accountInfo를 초기화하기 위한 코드
+  const dispatch: AppDispatch = useDispatch();
 
   let [inputText, setInputText] = useState('');
   let [inputTextAvailable, setInputTextAvailable] = useState(true) //상단의 문장 입력하는 칸에다가 텍스트를 입력할 수 있는 상태 handling
@@ -416,8 +423,8 @@ function TextInputScreen(){
             signal: controller.signal,
           });
 
-          // 받아온 데이터를 redux에 각각 저장 (setMealInput 상태변경 함수는 직접 import했다)
-          setMealInput({ month: markedMonth, mealData: response.data });
+          // 받아온 데이터를 redux에 각각 저장 (setMealInput 상태변경 함수는 직접 import했음에도 불구하고, dispatch를 통해 직접 변경해야 한다)
+          dispatch(setMealInput({ month: markedMonth, mealData: response.data }));
           console.log("받아온 정보: ", response.data)
           console.log(markedMonth, '기준으로 잘 불러옴!');
       }

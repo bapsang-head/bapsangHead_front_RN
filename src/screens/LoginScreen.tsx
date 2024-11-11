@@ -13,7 +13,7 @@ import * as KakaoLogins from "@react-native-seoul/kakao-login";
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
-import { setName, setEmail, setAge, setGender, setActivityLevel, setHeight, setWeight } from "../slices/accountInfoSlice";
+import { setName, setEmail, setAge, setGender, setActivityLevel, setHeight, setWeight, calculateBMR, calculateActivityMetabolism } from "../slices/accountInfoSlice";
 import { setMealInput } from '../slices/mealInputSlice';
 
 import { format, subMonths, addMonths } from 'date-fns'; //날짜 formatting을 위해 date-fns 함수를 사용할 것임
@@ -48,6 +48,10 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
             dispatch(setWeight(response.data.weight));
             dispatch(setHeight(response.data.height));
 
+            //모든 상태가 설정된 후 기초 대사량 및 활동 대사량 계산 후 저장
+            dispatch(calculateBMR());
+            dispatch(calculateActivityMetabolism());
+            
         }
     } catch (error) {
         console.error('get 요청 중 에러 발생: ', error)
@@ -92,7 +96,7 @@ async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
 }
 
 //로그인 화면!
-function LoginScreen({route, navigation})
+function LoginScreen({navigation})
 {
     let [kakaoLoginResponse, setKakaoLoginResponse] = useState(null); //카카오 로그인을 최초로 하면 여기에 부가 정보들을 받아올 것이다
 

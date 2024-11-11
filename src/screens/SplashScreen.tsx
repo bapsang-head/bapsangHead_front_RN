@@ -10,7 +10,17 @@ import { format, subMonths, addMonths } from 'date-fns'; //날짜 formatting을 
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
-import { setHeight, setWeight, setAge, setGender, setActivityLevel, setName, setEmail } from "../slices/accountInfoSlice";
+import { 
+    setHeight, 
+    setWeight, 
+    setAge, 
+    setGender, 
+    setActivityLevel, 
+    setName, 
+    setEmail,
+    calculateBMR, 
+    calculateActivityMetabolism 
+} from "../slices/accountInfoSlice";
 import { setMealInput } from '../slices/mealInputSlice';
 
 //'월별 식단 입력 정보 데이터'를 서버로부터 불러와서 redux에 저장하는 함수
@@ -75,43 +85,53 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
             dispatch(setWeight(response.data.weight));
             dispatch(setHeight(response.data.height));
 
+            //모든 상태가 설정된 후 기초 대사량 및 활동 대사량 계산 후 저장
+            dispatch(calculateBMR());
+            dispatch(calculateActivityMetabolism());
+
         }
     } catch (error) {
         console.error('get 요청 중 에러 발생: ', error)
     }
 }
 
-//accessToken 유효기간 체킹
+//accessToken 유효기간 체킹 
+//AggregateError가 발생할 수 있으므로, 이를 해결하기 위해 아래와 같이 추가적인 try-catch문이 요구됨
 async function checkAccessToken(navigation, dispatch: AppDispatch) {
-
     try {
         const accessToken = await AsyncStorage.getItem('accessToken');
 
-        //accessToken이 AsyncStorage에 존재한다면
-        if(accessToken) {
-            const decodedAccessToken = jwtDecode(accessToken);
+        if (accessToken) {
+            try {
+                const decodedAccessToken = jwtDecode(accessToken);
+                const currentTime = Date.now() / 1000;
 
-            const currentTime = Date.now() / 1000; //현재 시간을 초 단위로 변환
-
-            if(decodedAccessToken.exp < currentTime) {
-                console.log('AccessToken이 만료되었습니다.');
-                checkRefreshToken(navigation);
-            } else {
-                console.log('AccessToken이 유효합니다. 로그인을 진행합니다.');
-                fetchUserProfile(accessToken, dispatch);
-                fetchMealInput(accessToken, dispatch);
-                
-                navigation.replace("TabNavigator"); //로그인을 바로 진행합니다
+                if (decodedAccessToken.exp < currentTime) {
+                    console.log('AccessToken이 만료되었습니다.');
+                    checkRefreshToken(navigation);
+                } else {
+                    console.log('AccessToken이 유효합니다. 로그인을 진행합니다.');
+                    try {
+                        await fetchUserProfile(accessToken, dispatch);
+                        await fetchMealInput(accessToken, dispatch);
+                        navigation.replace("TabNavigator");
+                    } catch (fetchError) {
+                        console.error('프로필이나 식단 데이터를 가져오는 중 오류 발생:', fetchError);
+                    }
+                }
+            } catch (decodeError) {
+                console.error('AccessToken 디코딩 중 오류 발생:', decodeError);
+                navigation.replace("LoginScreen");
             }
         } else {
             console.log('accessToken이 asyncStorage에 존재하지 않습니다.');
             navigation.replace("LoginScreen");
         }
-        
     } catch (error) {
-        console.error('AccessToken 확인하던 도중에 에러 발생함: ', error);
+        console.error('AccessToken 확인하던 도중에 에러 발생함:', error);
     }
 }
+
 
 //refreshToken을 이용한 체킹 (유효할 시에 이를 이용하여 accessToken 재발급(로그인 수행), 유효하지 않으면 로그인 창으로 이동)
 async function checkRefreshToken(navigation) {

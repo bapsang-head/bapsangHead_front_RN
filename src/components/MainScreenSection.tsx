@@ -93,9 +93,7 @@ async function fetchMealInfo(eatingTime: string, formattedDate: string, navigati
                   'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
               },
           })
-
-          console.log('accessToken: ', accessToken);
-
+          
           //응답이 배열인지 확인하고, 배열이 비어있는지 체크
           if(Array.isArray(response.data) && response.data.length === 0) {
             console.log('응답 배열이 비어있습니다.');

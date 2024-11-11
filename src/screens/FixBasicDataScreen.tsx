@@ -10,7 +10,7 @@ import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/ve
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
-import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
+import { setHeight, setWeight, setAge, setGender, calculateBMR } from "../slices/accountInfoSlice";
 
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import axios from 'axios';
@@ -96,8 +96,10 @@ function FixBasicDataScreen() {
                 }
             );
 
+            dispatch(calculateBMR()); //BMR 값 변경 (이와 관련된 height, weight, age가 변경되었기 때문)
             //성공적으로 요청이 완료되었을 경우의 처리
-            console.log('성공적으로 기본 정보 수정 완료되었습니다: ', response.data);
+            console.log('성공적으로 기본 정보 수정 완료되었습니다. 이에 따라 기초 대사량 값도 변경되었습니다: ', response.data);
+            
             nav.goBack();
         } catch (error) {
             //요청 실패 시의 에러 처리

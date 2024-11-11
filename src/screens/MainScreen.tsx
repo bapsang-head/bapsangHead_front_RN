@@ -1,6 +1,6 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { CommonActions } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, Dimensions, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, runOnJS } from 'react-native-reanimated';
@@ -18,10 +18,17 @@ import { RootState, AppDispatch } from "../store";
 import { setMarkedDate } from '../slices/markedDateSlice'
 
 import {
-  getDate,
+  format,
   getYear,
   getMonth,
 } from "date-fns"
+
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
+//해당 화면에선 로그아웃을 위해 필요한 import들
+import EncryptedStorage from 'react-native-encrypted-storage';
+import * as KakaoLogins from "@react-native-seoul/kakao-login";
 
 //components import
 import BottomSheetModal from '@components/BottomSheetModal';
@@ -32,12 +39,41 @@ import MainScreenSection from '@components/MainScreenSection';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+//accessToken 만료로 인한 오류 발생 시 자동 로그아웃 수행을 위한 autoLogOut 함수
+async function autoLogOut(navigation) {
+  // 로그아웃이 필요할 때 alert 창을 띄워 알림
+  alert("accessToken이 만료되어 로그아웃을 수행합니다");
+
+  // "Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
+  try {
+      const logOutString = await KakaoLogins.logout(); // 카카오 로그아웃 수행
+      if (logOutString != null) {
+          console.log(logOutString); // 받아온 정보 log에 찍어보기
+          await EncryptedStorage.removeItem('refreshToken'); // refreshToken 삭제
+          await AsyncStorage.removeItem('accessToken'); // accessToken 삭제
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0, //Navigation Stack에 'LoginScreen'만 남도록 설정
+              routes: [
+                {name: 'LoginScreen'}
+              ]
+            })
+          );
+      } else {
+          console.log('로그아웃 정상적으로 안됨!');
+      }
+  } catch (error) {
+      console.log(error);
+  }
+}
+
 //메인화면 Component
 function MainScreen({navigation}) {
 
   const bottomSheetRef = useRef<BottomSheet>(null); // Reference for the bottom sheet
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [todayEatenCalories, setTodayEatenCalories] = useState<number | null>(null);
 
   let [pointDate, setPointDate] = useState(new Date()); 
   let [isCalendarOpened, setIsCalendarOpened] = useState(false); //Calendar의 visibility를 관리한다
@@ -47,8 +83,64 @@ function MainScreen({navigation}) {
   let [mealInfoDetail_Dinner, setMealInfoDetail_Dinner] = useState(null); //세부 영양정보 표시를 위해 사용하는 state (추후, 세부영양성분 표시 bottomsheet에 사용 예정)
   let [detailInfo_Time, setDetailInfo_Time] = useState(null); //어느 section에서 세부 영양정보 표시 버튼을 눌렀는지 확인해야 함 (아침, 점심, 저녁 식사 중 하나일 것임)
 
-  //redux에 저장되어 있는 markedDate 정보를 가져온다
+  //redux에 저장되어 있는 markedDate, 활동대사량(activityMetabolism) 정보를 가져온다
   let markedDate = useSelector((state: RootState) => state.markedDate.date);
+  let activityMetabolism = Math.round(useSelector((state: RootState) => state.accountInfo.activityMetabolism));
+
+  // 총 칼로리만 계산하는 함수
+  function calculateTotalCalories(mealInfo: any) {
+    const totalCalories = mealInfo.reduce((total: number, item: any) => {
+        const calorie = Math.round(item.calorie * (item.gram / 100) * item.count);
+        return total + calorie;
+    }, 0);
+
+    return totalCalories;
+  }
+
+  //오늘 먹은 칼로리를 계산하는 메소드 calculateTodayEatenCalories()
+  async function calculateTodayEatenCalories(date: string): Promise<number> {
+    const mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER'];
+    let totalTodayEatenCalories = 0;
+
+    try {
+      const accessToken = await AsyncStorage.getItem('accessToken'); //accessToken을 우선 가져온다
+      if(!accessToken) //accessToken이 존재하지 않다면
+      {
+        console.error('Access Token이 존재하지 않습니다');
+        return null;
+      }
+
+      //mealTypes 배열을 순회하며 요청을 지속해서 날린다
+      for(const mealType of mealTypes) {
+        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/date/${date}/type/${mealType}`;
+        const response = await axios.get(url, {
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+
+        if (Array.isArray(response.data) && response.data.length === 0) { //응답 배열이 비어 있다면..
+          console.log(`날짜 ${date}, 식사 타입 ${mealType}에 대한 응답 배열이 비어 있습니다.`);
+          continue;
+        }
+
+        totalTodayEatenCalories += calculateTotalCalories(response.data); //총 칼로리 계산
+      }
+
+    } catch(error) {
+      if(error.response?.status === 401) {
+        console.log("인증 에러: 401 - 자동 로그아웃 수행");
+        await autoLogOut(navigation); //자동 로그아웃 함수 호출
+        return null;  // 자동 로그아웃 이후 null 반환
+      } else {
+        console.error('오늘의 칼로리를 계산하는 중 에러가 발생했습니다:', error);
+        return null;
+      }
+    }
+
+    return totalTodayEatenCalories;
+  }
 
   //캘린더를 보여주거나 숨기는 함수 toggleCalendar를 정의한다 (의존성 배열로 isCalendarOpened, markedDate를 집어 넣는다)
   let toggleCalendar = useCallback(() => {
@@ -57,7 +149,7 @@ function MainScreen({navigation}) {
     if (pointDate.toISOString() !== new Date(markedDate).toISOString()) {
       setPointDate(new Date(markedDate));
     }
-    
+
     //Calendar가 펴져 있는지, 접혀 있는지에 대한 상태값을 바꾼다
     setIsCalendarOpened(!isCalendarOpened);
   }, [isCalendarOpened, markedDate, pointDate]);
@@ -139,6 +231,16 @@ function MainScreen({navigation}) {
   let year = getYear(pointDate);
   let month = getMonth(pointDate) + 1;
 
+  //todayEatenCalories 상태 업데이트를 위한 useEffect (markedDate가 변경될 때마다 칼로리 업데이트)
+  useEffect(() => {
+    async function fetchCalories() {
+      const calories = await calculateTodayEatenCalories(format(markedDate, 'yyyy-MM-dd'));
+      setTodayEatenCalories(calories);
+    }
+
+    fetchCalories();
+  }, [markedDate]);
+
 
   return (
     <>
@@ -207,7 +309,11 @@ function MainScreen({navigation}) {
           style={{ display: isDetailModalOpen ? 'none' : 'flex'}}> 
           <View style={styles.bottomSheetContent}>
             <Text>나의 일일 칼로리 섭취 현황 확인하기</Text>
-            <BottomSheetModal onClose={false} MyActivity={3250} TodayEatenCalories={1000}/>
+            <BottomSheetModal 
+              onClose={false} 
+              MyActivity={activityMetabolism} 
+              TodayEatenCalories={todayEatenCalories || 0} 
+            />
           </View>
         </BottomSheet>
 

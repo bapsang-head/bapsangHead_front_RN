@@ -31,6 +31,8 @@ function MyPageScreen({route, navigation}) {
     let accountInfo = useSelector((state: RootState) => state.accountInfo);
 
     function initializeAccountInfo() {
+        dispatch(setEmail(null));
+        dispatch(setName(null));
         dispatch(setHeight(null));
         dispatch(setWeight(null));
         dispatch(setAge(null));
