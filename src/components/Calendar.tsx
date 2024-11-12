@@ -221,7 +221,13 @@ function renderCalendar(pointDate: Date,
 }
 
 // Redux에 있는지 확인 후 없으면 서버에서 데이터를 가져오는 함수
-async function checkAndFetchMealData(month: string, mealData: any, dispatch: AppDispatch, navigation, hasLoggedOutRef: MutableRefObject<boolean>) {
+async function checkAndFetchMealData(
+    month: string, 
+    mealData: any, 
+    dispatch: AppDispatch, 
+    navigation, 
+    hasLoggedOutRef: MutableRefObject<boolean>
+) {
     
     if (!mealData || !mealData[month]) { // Redux에 해당 달 데이터가 없다면 서버에서 가져옴
         const accessToken = await AsyncStorage.getItem('accessToken'); //accessToken을 우선 가져온다
