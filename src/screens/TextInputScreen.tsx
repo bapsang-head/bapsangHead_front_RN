@@ -106,6 +106,9 @@ function TextInputScreen(){
   //사용자가 1차 분석 후 수정을 완료하고 '완료' 버튼을 눌렀는지 여부를 확인하는 state
   let [isFixingCompleted, setIsFixingCompleted] = useState(false);
 
+  //2차 식단 정보 분석 후 분석 결과 화면에 바로 보여주기 위해 state 하나를 선언한다
+  let [mealInfoDetail, setMealInfoDetail] = useState(null);
+
   const updateStates = (direction: String) => {
     //'완료' 버튼을 누른 경우
     if(direction === 'forward') {
@@ -361,7 +364,9 @@ function TextInputScreen(){
       });
 
       const results = await Promise.all(promises);
-      console.log('모든 요청 완료:', results);
+      
+      setMealInfoDetail(results); //state에 서버로부터 불러온 식단 세부 정보 저장
+      console.log('모든 요청 완료, 세부 식단 정보를 출력하겠습니다:', mealInfoDetail);
 
       setCompleteBtnAvailable(true);
       setSubComponentPageNum((prevNum) => prevNum + 1);

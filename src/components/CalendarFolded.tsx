@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, MutableRefObject } from 'react';
 import {View, Text, FlatList, ScrollView, Dimensions, TouchableOpacity} from 'react-native';
 import { styles } from '../styles/styles'
 
@@ -30,8 +30,13 @@ const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
 
-async function autoLogOut(navigation) {
+async function autoLogOut(navigation, hasLoggedOutRef: MutableRefObject<boolean>) {
+    if(hasLoggedOutRef.current)
+    {
+        return; //이미 로그아웃이 수행되었다면 다시 해당 함수를 수행하지 않음
+    }
     alert("accessToken이 만료되어 로그아웃을 수행합니다");
+    hasLoggedOutRef.current = true; // 로그아웃 상태로 설정
   
     try {
       const logOutString = await KakaoLogins.logout();
@@ -51,7 +56,7 @@ async function autoLogOut(navigation) {
     } catch (error) {
       console.log(error);
     }
-  }
+}
 
 //redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
 function makeMealInputMarking(mealDataForDate: any) {
@@ -151,7 +156,7 @@ function renderWeekCalendar(
 // 날짜별 meal input 데이터를 서버에서 가져오는 함수
 //주간 달력에서는 구분이 애매하므로, 주간 달력에 나와있는 날짜들의 month 값을 일일이 갖고 와서 마킹할 수 있도록 해야 한다
 //해당 구역에서는, 로직의 애매함으로 인해 모두 서버에서 데이터를 가져와서 뿌리는 식으로 진행할 것이다 (월간 달력에서는 redux에 저장할 예정)
-async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation) {
+async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation, hasLoggedOutRef: MutableRefObject<boolean>) {
     //Promise 객체와 map 함수를 이용해서 지속 요청을 진행할 것임
     const dataPromises = weekCalendarDays.map(async (day) => {
         const month = format(day, 'yyyy-MM');
@@ -165,19 +170,18 @@ async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation) {
                     'Authorization': `Bearer ${accessToken}`,
                 }
             });
-            console.log('서버에서 데이터를 가져와 달력에 뿌리겠습니다.');
 
             // 가져온 데이터를 day에 맞춰 필터링하여 바로 반환
             return response.data.find((meal: any) => meal.date === dayFormatted);
         } catch (error) {
             if(error.response?.status === 401) {
                 console.log("인증 에러: 401 - 자동 로그아웃 수행");
-                await autoLogOut(navigation); //자동 로그아웃 함수 호출
+                await autoLogOut(navigation, hasLoggedOutRef); //자동 로그아웃 함수 호출
                 return null;  // 자동 로그아웃 이후 null 반환
-              } else {
+            } else {
                 console.error('데이터를 가져오는 중 에러 발생: ', error);
                 return null;
-              }
+            }
             
         }
     });
@@ -189,6 +193,7 @@ async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation) {
 function CalendarFolded(props: any) {   
 
     const navigation = useNavigation();
+    const hasLoggedOutRef = useRef(false); //로그아웃 상태를 추적하기 위한 useRef
 
     let weekMarking = ["일", "월", "화", "수", "목", "금", "토"]; //요일을 표시하기 위한 데이터
 
@@ -199,11 +204,8 @@ function CalendarFolded(props: any) {
     const MAX_COUNT_OF_WEEKS = 1000; // 매우 많은 주들을 미리 준비
     const INITIAL_INDEX = Math.floor(MAX_COUNT_OF_WEEKS / 2); // 중간에 위치한 현재 주차 인덱스
 
-    //실험용 코드 (redux-toolkit으로 markedDate를 전역적으로 관리하고 있음)
+    //redux-toolkit으로 markedDate를 전역적으로 관리하고 있음
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
-
-    //mealInputData 관련 정보를 가져온다
-    // let mealInputData = useSelector((state: RootState) => state.mealInput.data);
 
     console.log('CalendarFolded 렌더링: ', props.pointDate);
 
@@ -234,7 +236,7 @@ function CalendarFolded(props: any) {
             const days = makeWeekCalendarDays(props.pointDate); //달력에 들어간 주간 달력 날짜들을 만든다(pointDate 기준)
             setWeekCalendarDays(days);
 
-            const mealData = await fetchMealDataForWeek(days, navigation); //한 주간 관련해서 입력 현황을 불러온다(필요시 서버 요청도 함)
+            const mealData = await fetchMealDataForWeek(days, navigation, hasLoggedOutRef); //한 주간 관련해서 입력 현황을 불러온다(필요시 서버 요청도 함)
             setMealDataByDate(mealData);
         };
 

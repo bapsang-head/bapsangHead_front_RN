@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, useLayoutEffect, MutableRefObject } from 'react';
 import {View, Text, FlatList, ScrollView, Dimensions, TouchableOpacity} from 'react-native';
+import {CommonActions, useNavigation} from '@react-navigation/native'
 import * as Progress from 'react-native-progress';
 import {styles} from '../styles/styles'
 
@@ -21,12 +22,43 @@ import {
     } from 'date-fns'; //달력을 직접 만들기 위한 date-fns 라이브러리 import!
 
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import EncryptedStorage from 'react-native-encrypted-storage';
+import KakaoLogins from '@react-native-seoul/kakao-login';
 import axios from 'axios'
 import { setMealInput } from '../slices/mealInputSlice'; // mealInputSlice 파일에서 setMealInput 액션 가져오기
+
 
 const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
+
+async function autoLogOut(navigation, hasLoggedOutRef: MutableRefObject<boolean>) {
+    if(hasLoggedOutRef.current)
+    {
+        return; //이미 로그아웃이 수행되었다면 다시 해당 함수를 수행하지 않음
+    }
+    alert("accessToken이 만료되어 로그아웃을 수행합니다");
+    hasLoggedOutRef.current = true; // 로그아웃 상태로 설정
+  
+    try {
+      const logOutString = await KakaoLogins.logout();
+      if (logOutString != null) {
+        console.log(logOutString);
+        await EncryptedStorage.removeItem('refreshToken');
+        await AsyncStorage.removeItem('accessToken');
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'LoginScreen' }],
+          })
+        );
+      } else {
+        console.log('로그아웃 정상적으로 안됨!');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+}
 
 //redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
 function makeMealInputMarking(mealDataForDate: any) {
@@ -189,7 +221,7 @@ function renderCalendar(pointDate: Date,
 }
 
 // Redux에 있는지 확인 후 없으면 서버에서 데이터를 가져오는 함수
-async function checkAndFetchMealData(month: string, mealData: any, dispatch: AppDispatch) {
+async function checkAndFetchMealData(month: string, mealData: any, dispatch: AppDispatch, navigation, hasLoggedOutRef: MutableRefObject<boolean>) {
     
     if (!mealData || !mealData[month]) { // Redux에 해당 달 데이터가 없다면 서버에서 가져옴
         const accessToken = await AsyncStorage.getItem('accessToken'); //accessToken을 우선 가져온다
@@ -208,7 +240,14 @@ async function checkAndFetchMealData(month: string, mealData: any, dispatch: App
             return response.data[month];
 
         } catch (error) {
-            console.error('서버에서 데이터를 불러오는 중 에러 발생: ', error);
+            if(error.response?.status === 401) {
+                console.log("인증 에러: 401 - 자동 로그아웃 수행");
+                await autoLogOut(navigation, hasLoggedOutRef); //자동 로그아웃 함수 호출
+                return null;  // 자동 로그아웃 이후 null 반환
+            } else {
+                console.error('데이터를 가져오는 중 에러 발생: ', error);
+                return null;
+            }
         }
     } else { //있으면 걍 넘겨
         console.log(month,'Redux에 데이터가 있어서 여기 옴');
@@ -219,6 +258,8 @@ async function checkAndFetchMealData(month: string, mealData: any, dispatch: App
 
 //UI적으로 라이브러리로는 내가 원하는 Calendar를 구현할 수 없으므로,직접 구현할 것이다
 function Calendar(props: any){
+    const navigation = useNavigation();
+    const hasLoggedOutRef = useRef(false); //로그아웃 상태를 추적하기 위한 useRef
 
     let weekMarking = ["일", "월", "화", "수", "목", "금", "토"]; //요일을 표시하기 위한 데이터
 
@@ -244,7 +285,7 @@ function Calendar(props: any){
         const fetchMealData = async () => {
             const currentMonth = format(props.pointDate, 'yyyy-MM');
             //Redux에 데이터가 없을 경우에만 서버에서 가져오기
-            const data = await checkAndFetchMealData(currentMonth, mealInputData, dispatch);
+            const data = await checkAndFetchMealData(currentMonth, mealInputData, dispatch, navigation, hasLoggedOutRef);
             setMealInputForMonth(data);
         }
 
