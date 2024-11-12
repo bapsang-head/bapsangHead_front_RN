@@ -163,7 +163,7 @@ function TextInputScreen(){
                 userInputAnalysis_Second={userInputAnalysis_Second}
                 abortControllerRef={abortControllerRef}/>;
       case 4:
-        return <SaveCompleteComponent setCompleteBtnAvailable={setCompleteBtnAvailable}/>
+        return <SaveCompleteComponent setCompleteBtnAvailable={setCompleteBtnAvailable} mealInfoDetail={mealInfoDetail}/>
     } 
   }
 

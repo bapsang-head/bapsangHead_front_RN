@@ -207,7 +207,7 @@ function DetailScreen() {
             async function fetchWeekCaloriesInfo() {
                 try {
                     // 각 요일별 칼로리 총합을 계산하고 상태로 저장
-                    const responseArray = await calculateWeekEatenCalories('2024-11-15'); // endDate를 원하는 날짜로 설정 (현재는 하드코딩 해놓음, 추후 format(currentDate, 'yyyy-MM-dd')로 바꿀 것임)
+                    const responseArray = await calculateWeekEatenCalories(format(currentDate, 'yyyy-MM-dd')); // endDate를 원하는 날짜로 설정 (현재는 하드코딩 해놓음, 추후 format(currentDate, 'yyyy-MM-dd')로 바꿀 것임)
                     setCaloriesChartData({labels: dayList, datasets: [{data: responseArray}]})
     
     
