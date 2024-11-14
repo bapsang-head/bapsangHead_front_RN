@@ -4,8 +4,8 @@
     "slug": "bapSang_Head_New",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/bapSangHead_Logo.png",
     "userInterfaceStyle": "light",
+    "icon": "./src/assets/bapsanghead_new_logo.png",
     "splash": {
       "image": "./src/assets/splash.png",
       "resizeMode": "contain",
@@ -16,10 +16,6 @@
       "bundleIdentifier": "com.bapsanghead.project"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./src/assets/bapSangHead_Logo.png",
-        "backgroundColor": "#ffffff"
-      },
       "package": "com.bapsanghead.project"
     },
     "web": {
