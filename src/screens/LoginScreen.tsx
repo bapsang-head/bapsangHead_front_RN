@@ -88,7 +88,7 @@ async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
             dispatch(setMealInput({ month: previousMonth, mealData: prevData.data }));
             dispatch(setMealInput({ month: currentMonth, mealData: currentData.data }));
             dispatch(setMealInput({ month: nextMonth, mealData: nextData.data }));
-            console.log(currentMonth, '기준으로 잘 불러옴!');
+            console.log('bapsanghead:', currentMonth, '기준으로 잘 불러옴!');
         }
     } catch (error) {
         console.error('Meal Input 데이터 불러오는 중 에러 발생: ', error);
@@ -118,7 +118,7 @@ function LoginScreen({navigation})
 
     //카카오 로그인 수행을 위한 함수 (async 함수)
     async function loginWithKakao() {
-        console.log("버튼 눌림");
+        console.log("bapsanghead: 버튼 눌림");
 
         let provider = 'kakao'; //oAuth 제공자 이름(provider)를 설정한다
         const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/auth/login/${provider}`; //post 요청에 사용할 url 설정
@@ -135,7 +135,7 @@ function LoginScreen({navigation})
                     accessToken: kakaoLoginResponse.accessToken
                 };
                 
-                console.log(kakaoLoginResponse);
+                console.log('bapsanghead:', kakaoLoginResponse);
                 console.log(data);
 
                 //axios를 이용한 post 요청에 관하여 시도하는 try-catch 구문
@@ -147,8 +147,8 @@ function LoginScreen({navigation})
                     })
                     
                     //응답 데이터에서 "isRegistered", "name" 속성을 추출하여 로그에 출력
-                    console.log('가입됨? => ', response.data.isRegistered);
-                    console.log('이름이 뭐임? => ', response.data.name);
+                    console.log('bapsanghead: 가입됨? => ', response.data.isRegistered);
+                    console.log('bapsanghead: 이름이 뭐임? => ', response.data.name);
 
                     //내부 저장소에 accessToken 저장
                     await AsyncStorage.setItem(
@@ -176,17 +176,17 @@ function LoginScreen({navigation})
                     
                 } catch (error) {
                     if(error.response) {
-                        console.error('Response error: ', error.response.data);
+                        console.error('bapsanghead: Response error: ', error.response.data);
                     } else if(error.request) {
-                        console.error('Request error: ', error. request);
+                        console.error('bapsanghead: Request error: ', error. request);
                     } else {
-                        console.error('Error: ', error.message);
+                        console.error('bapsanghead: Error: ', error.message);
                     }
                 }
             }
              
         } catch (error) {
-            console.error('kakao login error: ', error.message);
+            console.error('bapsanghead: kakao login error: ', error.message);
         }
     }
 
@@ -199,7 +199,7 @@ function LoginScreen({navigation})
             alignItems: 'center', 
             justifyContent: 'center'}}>
             <View>
-                <Image source={require("../assets/app_Logo.png")} style={{width: 160, height: 160}}/>
+                <Image source={require("../assets/bapsanghead_new_logo.png")} style={{width: 160, height: 160}}/>
                 <Text style={{fontSize: 24, fontWeight: 'bold', textAlign: 'center'}}>밥상머리</Text>
             </View>
             <TouchableOpacity style={{marginTop: 80}} onPress={()=>{loginWithKakao()}}> 

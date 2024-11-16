@@ -392,6 +392,17 @@ function SettingScreen({Stack, navigation}) {
             console.log('새로 받아온 accessToken이 뭐임? => ', response.data.accessToken)
             console.log('refreshToken이 뭐임? => ', response.data.refreshToken);
 
+            // 새로 받아온 accessToken을 AsyncStorage에 저장
+            try {
+                await AsyncStorage.setItem('accessToken', response.data.accessToken);
+            } catch (storageError) {
+                console.error('AsyncStorage 저장 오류:', storageError);
+            }
+
+            // TabNavigator 화면으로 이동
+            navigation.replace('TabNavigator');
+
+
         } catch (error) {
             if(error.response) {
                 console.error('Response error: ', error.response.data);
@@ -470,7 +481,7 @@ function SettingScreen({Stack, navigation}) {
                         </TouchableOpacity>
                       ),
                     headerRight: () => (
-                      <TouchableOpacity onPress={()=>{registerAccount(); navigation.replace('TabNavigator')}}>
+                      <TouchableOpacity onPress={()=>{registerAccount();}}>
                         <Text style={{fontSize: 20}}>완료</Text>
                       </TouchableOpacity>
                     ) 

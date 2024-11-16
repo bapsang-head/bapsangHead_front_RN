@@ -3,6 +3,9 @@ import 'dotenv/config';
 export default ({ config }) => {
     return {
         ...config,
+        extra: {
+            kakaoAppKey: process.env.KAKAO_APP_KEY,
+        },
         plugins: [
             [
                 "@react-native-seoul/kakao-login",

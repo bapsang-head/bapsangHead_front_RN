@@ -53,7 +53,7 @@ async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
             dispatch(setMealInput({ month: previousMonth, mealData: prevData.data }));
             dispatch(setMealInput({ month: currentMonth, mealData: currentData.data }));
             dispatch(setMealInput({ month: nextMonth, mealData: nextData.data }));
-            console.log(currentMonth, '기준으로 잘 불러옴!');
+            console.log('bapsanghead:', currentMonth, '기준으로 잘 불러옴!');
         }
     } catch (error) {
         console.error('Meal Input 데이터 불러오는 중 에러 발생: ', error);
@@ -74,7 +74,7 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
                 },
             })
 
-            console.log('accessToken: ', accessToken);
+            console.log('bapsanghead: accessToken은.. ', accessToken);
 
             //response로 넘어온 정보 redux에 저장
             dispatch(setName(response.data.name));
@@ -91,7 +91,7 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
 
         }
     } catch (error) {
-        console.error('get 요청 중 에러 발생: ', error)
+        console.error('bapsanghead: get 요청 중 에러 발생: ', error)
     }
 }
 
@@ -107,28 +107,28 @@ async function checkAccessToken(navigation, dispatch: AppDispatch) {
                 const currentTime = Date.now() / 1000;
 
                 if (decodedAccessToken.exp < currentTime) {
-                    console.log('AccessToken이 만료되었습니다.');
+                    console.log('bapsanghead: AccessToken이 만료되었습니다.');
                     checkRefreshToken(navigation);
                 } else {
-                    console.log('AccessToken이 유효합니다. 로그인을 진행합니다.');
+                    console.log('bapsanghead: AccessToken이 유효합니다. 로그인을 진행합니다.');
                     try {
                         await fetchUserProfile(accessToken, dispatch);
                         await fetchMealInput(accessToken, dispatch);
                         navigation.replace("TabNavigator");
                     } catch (fetchError) {
-                        console.error('프로필이나 식단 데이터를 가져오는 중 오류 발생:', fetchError);
+                        console.error('bapsanghead: 프로필이나 식단 데이터를 가져오는 중 오류 발생:', fetchError);
                     }
                 }
             } catch (decodeError) {
-                console.error('AccessToken 디코딩 중 오류 발생:', decodeError);
+                console.error('bapsanghead: AccessToken 디코딩 중 오류 발생:', decodeError);
                 navigation.replace("LoginScreen");
             }
         } else {
-            console.log('accessToken이 asyncStorage에 존재하지 않습니다.');
+            console.log('bapsanghead: accessToken이 asyncStorage에 존재하지 않습니다.');
             navigation.replace("LoginScreen");
         }
     } catch (error) {
-        console.error('AccessToken 확인하던 도중에 에러 발생함:', error);
+        console.error('bapsanghead: AccessToken 확인하던 도중에 에러 발생함:', error);
     }
 }
 
@@ -149,12 +149,12 @@ async function checkRefreshToken(navigation) {
             //     console.log('Refresh Token이 유효합니다.');
             // }
         } else {
-            console.log('refreshToken이 encryptedStorage에 존재하지 않습니다.');
+            console.log('bapsanghead: refreshToken이 encryptedStorage에 존재하지 않습니다.');
         }
-        console.log('내부에 저장된 RefreshToken: ', refreshToken);
+        console.log('bapsanghead: 내부에 저장된 RefreshToken: ', refreshToken);
         navigation.replace("LoginScreen");
     } catch (error) {
-        console.error('RefreshToken 확인하던 도중에 에러 발생함: ', error);
+        console.error('bapsanghead: RefreshToken 확인하던 도중에 에러 발생함: ', error);
     }
 }
 
@@ -173,10 +173,10 @@ function SplashScreen() {
             //리소스 로딩 완료 후 적절한 화면으로 전환 (토큰 검사)
             checkAccessToken(navigation, dispatch);
         } catch (error) {
-            console.error('리소스 로드 실패', error);
+            console.error('bapsanghead: 리소스 로드 실패', error);
         }
     }
-
+ 
     useEffect(()=>{
         loadResourcesAndNavigate();
     },[navigation]);
