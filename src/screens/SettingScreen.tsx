@@ -12,7 +12,7 @@ import axios, {isCancel, AxiosError} from 'axios';
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
-import { setHeight, setWeight, setAge, setGender, setActivityLevel } from "../slices/accountInfoSlice";
+import { setHeight, setWeight, setAge, setGender, setActivityLevel, setName, setEmail, calculateActivityMetabolism, calculateBMR } from "../slices/accountInfoSlice";
 
 //내부 encrypted-storage와 async-storage에 접근하기 위해 import
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -344,6 +344,41 @@ function SettingScreen_Page3() {
     )
 }
 
+//유저 정보 서버로부터 불러와서 redux에 저장하는 함수 (이거는 회원가입하는 처음에만 해당됨)
+async function fetchUserProfile_inSignUp(accessToken: any, dispatch: AppDispatch) {
+    
+    if (!accessToken) {
+        console.error('Access token가 존재하지 않습니다');
+        return;
+    }
+
+    try {
+        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile`; //post 요청에 사용할 url 설정
+        if(accessToken) {
+            //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다
+            const response = await axios.get(url, {
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
+                },
+            })
+
+            console.log('bapsanghead: accessToken은.. ', accessToken);
+
+            //response로 넘어온 정보 redux에 저장
+            dispatch(setName(response.data.name));
+            dispatch(setEmail(response.data.email));
+
+            //모든 상태가 설정된 후 기초 대사량 및 활동 대사량 계산 후 저장
+            dispatch(calculateBMR());
+            dispatch(calculateActivityMetabolism());
+
+        }
+    } catch (error) {
+        console.error('bapsanghead: get 요청 중 에러 발생: ', error)
+    }
+}
+
 //여기 안에서 Stack Navigator를 만들어서 사용할 수 있도록 한다
 let StackInFirstSettings = createNativeStackNavigator();
 
@@ -351,6 +386,9 @@ let StackInFirstSettings = createNativeStackNavigator();
 function SettingScreen({Stack, navigation}) {
 
     console.log('setting screen rendering');
+
+    //accountInfo를 초기화하기 위한 코드
+    const dispatch: AppDispatch = useDispatch();
 
     //실험용 코드 (redux-toolkit으로 accountInfo를 전역적으로 관리하고 있음)
     let accountInfo = useSelector((state: RootState) => state.accountInfo);
@@ -362,7 +400,11 @@ function SettingScreen({Stack, navigation}) {
         // accessToken
 
         const beforeRegisterAccessToken = await AsyncStorage.getItem('accessToken') //내부 저장소의 accessToken을 우선 가져온다
-        console.log('이전 accessToken: ', beforeRegisterAccessToken);
+        if (!beforeRegisterAccessToken) {
+            console.error('Access token가 유실되었습니다. 회원 가입을 더 이상 진행할 수 없습니다.');
+            return;
+        }
+        
         const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/auth/register`; //post 요청에 사용할 url 설정
 
         //request body에 포함될 데이터 정의
@@ -398,6 +440,9 @@ function SettingScreen({Stack, navigation}) {
             } catch (storageError) {
                 console.error('AsyncStorage 저장 오류:', storageError);
             }
+
+            //새로 불러온 엑세스 토큰과 dispatch 객체를 이용해서, redux 저장소에 정보 저장
+            await fetchUserProfile_inSignUp(response.data.accessToken, dispatch); 
 
             // TabNavigator 화면으로 이동
             navigation.replace('TabNavigator');

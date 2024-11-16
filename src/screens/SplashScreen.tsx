@@ -158,7 +158,7 @@ async function checkRefreshToken(navigation) {
     }
 }
 
-//SplashScreen
+//SplashScreen (스플래시 화면 관련 컴포넌트)
 function SplashScreen() {
     const navigation = useNavigation(); //navigation 기능 사용을 위한 useNavigation() 훅 사용
 
