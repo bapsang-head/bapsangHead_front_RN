@@ -256,7 +256,7 @@ async function checkAndFetchMealData(
             }
         }
     } else { //있으면 걍 넘겨
-        console.log(month,'Redux에 데이터가 있어서 여기 옴');
+        console.log('bapsanghead:', month,'Redux에 데이터가 있어서 여기 옴');
         return mealData[month];
     }
 }
@@ -284,7 +284,7 @@ function Calendar(props: any){
 
     let [mealInputForMonth, setMealInputForMonth] = useState(null);
 
-    console.log(props.pointDate);
+    console.log('bapsanghead: ', props.pointDate);
 
     //해당 동작은 props.pointDate가 변할 때만 수행하면 된다
     useEffect(() => {
@@ -352,7 +352,7 @@ function Calendar(props: any){
 
             props.setPointDate((prevDate) => addMonths(prevDate, 1)); //prevDate를 이용해 상태 업데이트
         } else {
-            console.log("스크롤 이벤트 발생하지 않음");
+            console.log("bapsanghead: 스크롤 이벤트 발생하지 않음");
         }
 
         prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교

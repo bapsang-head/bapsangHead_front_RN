@@ -24,7 +24,6 @@ import KakaoLogins from '@react-native-seoul/kakao-login';
 
 import { useNavigation, CommonActions } from '@react-navigation/native'
 import axios from 'axios'
-import { setMealInput } from '../slices/mealInputSlice'; // mealInputSlice 파일에서 setMealInput 액션 가져오기
 
 const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
@@ -58,7 +57,7 @@ async function autoLogOut(navigation, hasLoggedOutRef: MutableRefObject<boolean>
     }
 }
 
-//redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
+//서버에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
 function makeMealInputMarking(mealDataForDate: any) {
 
     //해당하는 것에 따라 컴포넌트를 return 한다
@@ -171,6 +170,8 @@ async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation, hasLog
                 }
             });
 
+            console.log("bapsanghead: ",dayFormatted," 관련해서 식단 입력정보 내가 갖고 왔거든?", response.data.find((meal: any) => meal.date === dayFormatted));
+
             // 가져온 데이터를 day에 맞춰 필터링하여 바로 반환
             return response.data.find((meal: any) => meal.date === dayFormatted);
         } catch (error) {
@@ -207,7 +208,7 @@ function CalendarFolded(props: any) {
     //redux-toolkit으로 markedDate를 전역적으로 관리하고 있음
     let markedDate = useSelector((state: RootState) => state.markedDate.date);
 
-    console.log('CalendarFolded 렌더링: ', props.pointDate);
+    console.log('bapsanghead: CalendarFolded 렌더링: ', props.pointDate);
 
     props.pointDate = markedDate; //초기값은 markedDate로 설정해야 함
 
@@ -241,9 +242,14 @@ function CalendarFolded(props: any) {
         };
 
         fetchWeekData();
-        scrollEnabledRef.current = true; //스크롤 다시 활성화
 
     }, [props.pointDate]);
+
+    // //테스트용 코드
+    // useEffect(() => {
+    //     console.log("bapsanghead: useEffect triggered with pointDate:", props.pointDate);
+    // }, [props.setPointDate]);
+
 
     useEffect(() => {
         //initialScrollIndex에 맞는 초기 offsetX를 설정
@@ -258,8 +264,7 @@ function CalendarFolded(props: any) {
 
         const offsetX = event.nativeEvent.contentOffset.x;
 
-        console.log("Scroll Event Triggered(prevOffsetX)", prevOffsetX.current); // 스크롤 이벤트가 트리거되었는지 확인
-        console.log("Scroll Event Triggered(offsetX)", offsetX); // 스크롤 이벤트가 트리거되었는지 확인
+        console.log("bapsanghead: scrollEnabled 활성화 됐냐?:", scrollEnabledRef.current); // 스크롤 이벤트가 트리거되었는지 확인
 
         if(!scrollEnabledRef.current) //scrollEnabledRef가 false인 경우, handleScroll 이벤트를 중단시킨다
         {
@@ -269,16 +274,23 @@ function CalendarFolded(props: any) {
         const movementThreshold = contentWidth / 2; //이동이 실제로 발생했는지 판단하기 위한 Threshold
 
         //왼쪽으로 스크롤했을 경우
-        if(offsetX < prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
-            scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다 (과도한 스크롤 방지)
-            props.setPointDate((prevDate)=>{ return subWeeks(prevDate, 1)});
-            
+        if (offsetX < prevOffsetX.current - movementThreshold) {
+            scrollEnabledRef.current = false;
+            props.setPointDate((prevDate) => {
+                const newDate = subWeeks(prevDate, 1);
+                setTimeout(() => (scrollEnabledRef.current = true), 50); // 타이밍 보장
+                return newDate;
+            });
         //오른쪽으로 스크롤했을 경우
-        } else if(offsetX > prevOffsetX.current && Math.abs(offsetX - prevOffsetX.current) > movementThreshold) {
-            scrollEnabledRef.current = false; //우선은 ScrollEnabledRef를 False로 둔다
-            props.setPointDate((prevDate)=>{ return addWeeks(prevDate, 1)});
+        } else if (offsetX > prevOffsetX.current + movementThreshold) {
+            scrollEnabledRef.current = false;
+            props.setPointDate((prevDate) => {
+                const newDate = addWeeks(prevDate, 1);
+                setTimeout(() => (scrollEnabledRef.current = true), 50); // 타이밍 보장
+                return newDate;
+            });
         } else {
-            console.log("스크롤 이벤트 발생하지 않음");
+            console.log("bapsanghead: 스크롤 이벤트 발생하지 않음");
         }
 
         prevOffsetX.current = offsetX; // 현재 offsetX를 저장하여 다음 스크롤 이벤트에서 비교
@@ -316,7 +328,7 @@ function CalendarFolded(props: any) {
                     style={{ marginTop: 8 }}
                     ref={flatListRef}
                     data={weekDataRef.current}
-                    extraData={mealDataByDate} // mealDataByDate가 변경될 때 FlatList가 리렌더링됨
+                    extraData={[mealDataByDate, props.pointDate]} // mealDataByDate가 변경될 때 FlatList가 리렌더링됨
                     renderItem={({ item }) =>
                         renderWeekCalendar(
                             makeWeekCalendarDays(item.date), //각 주차별 날짜 배열을 생성하여 렌더링
@@ -325,7 +337,7 @@ function CalendarFolded(props: any) {
                             updateMarkedDate, 
                             mealDataByDate)
                     }
-                    keyExtractor={(item) => item.key}
+                    keyExtractor={(item) => `${item.key}-${props.pointDate}`} //고유 key 보장
                     horizontal
                     pagingEnabled
                     showsHorizontalScrollIndicator={false}

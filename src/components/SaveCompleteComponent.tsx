@@ -10,7 +10,7 @@ import DetailBottomSheetModal from './DetailBottomSheetModal';
 //2차 분석 완료 후 '식단 저장이 완료되었습니다' 화면 Component
 function SaveCompleteComponent(props) {
 
-    let [openMealInfoDetail, setOpenMealInfoDetail] = useState(false); //식단 세부 정보를 확인할 수 있어야 한다
+    // let [openMealInfoDetail, setOpenMealInfoDetail] = useState(false); //식단 세부 정보를 확인할 수 있어야 한다
     let [detailInfos, setDetailInfos] = useState([]);
 
     //의존성 배열을 비워 둠으로서 컴포넌트가 렌더링 되는 최초 시기에만 렌더링 될 수 있도록 함
@@ -26,23 +26,23 @@ function SaveCompleteComponent(props) {
     }, [props.mealInfoDetail])
 
     //글씨를 눌렀을 때 표시
-    const handleTextPress = () => {
-        setOpenMealInfoDetail(!openMealInfoDetail);
-    }
+    // const handleTextPress = () => {
+    //     setOpenMealInfoDetail(!openMealInfoDetail);
+    // }
     
     return (
         <View style={{marginTop: 160, justifyContent: 'center', alignItems: 'center'}}>
             <SaveCompleteIcon height={48} width={48}/>
             <Text style={{marginTop: 12, fontSize: 20, fontWeight: 'bold'}}>식단 저장이 완료되었습니다.</Text>
-            <TouchableOpacity onPress={handleTextPress}>
+            {/* <TouchableOpacity onPress={handleTextPress}>
                 <Text style={{marginTop: 32, fontSize: 16, fontWeight: 'medium'}}>이번 식단 정보 세부 분석법 보기</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             {
-                (openMealInfoDetail && detailInfos && detailInfos.length > 0) ? (
+                (detailInfos && detailInfos.length > 0) ? (
                     <ScrollView 
                         showsVerticalScrollIndicator={false} 
                         style={styles.modalContainer}
-                        contentContainerStyle={{paddingBottom: 200}}> 
+                        contentContainerStyle={{ paddingBottom: 380}}> 
                         {/* 분석했던 방법을 표시해주는 박스 */}
                         <View style={styles.detailContainer}>
                             {/* transformedResult 값을 바탕으로 세부 칼로리 정보를 찍어낸다 */}
@@ -61,7 +61,6 @@ function SaveCompleteComponent(props) {
                     null
                 )
             }
-            
         </View>
     )
 }
@@ -69,16 +68,15 @@ function SaveCompleteComponent(props) {
 //해당 modal에서 사용되는 StyleSheet
 const styles = StyleSheet.create({
     modalContainer: {
-        marginTop: 16,
+        marginTop: 32,
         backgroundColor: '#fff',
     },
     detailContainer: {
-        backgroundColor: '#FFF493',
+        backgroundColor: '#fffbd4',
         paddingHorizontal: 32,
         paddingVertical: 16,
         marginTop: 8,
         borderRadius: 12,
-        marginBottom: 100,
     }
   });
 
