@@ -210,7 +210,15 @@ function CalendarFolded(props: any) {
 
     console.log('bapsanghead: CalendarFolded 렌더링: ', props.pointDate);
 
-    props.pointDate = markedDate; //초기값은 markedDate로 설정해야 함
+    //Release 모드에서는 더 엄격한 최적화로 인해 로컬 state를 따로 만들어서 사용하는 것을 권장
+    const [localPointDate, setLocalPointDate] = useState(() => new Date(props.pointDate || markedDate)); //props.pointDate 값이 넘어오지 않았다면 초기엔 markedDate로 초기화
+
+    useEffect(() => {
+        if (props.pointDate.toISOString() !== localPointDate.toISOString()) {
+            setLocalPointDate(new Date(props.pointDate));
+            console.log('bapsanghead: localPointDate 바뀜!')
+        }
+    }, [props.pointDate]);
 
     //markedDate를 업데이트하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
@@ -230,6 +238,7 @@ function CalendarFolded(props: any) {
     const [mealDataByDate, setMealDataByDate] = useState<any[]>([]);
     const [weekCalendarDays, setWeekCalendarDays] = useState<Date[]>([]);
 
+
     // 주간 캘린더 데이터를 불러오는 useEffect
     useEffect(() => {
         //한 주치 날짜를 만들고, 입력 현황을 불러오는 역할을 하는 함수 fetchWeekData
@@ -242,8 +251,8 @@ function CalendarFolded(props: any) {
         };
 
         fetchWeekData();
-
-    }, [props.pointDate]);
+        console.log("bapsanghead: CalendarFolded에서 fetchWeekData() 메소드가 수행됨");
+    }, [localPointDate]);
 
     // //테스트용 코드
     // useEffect(() => {
@@ -277,16 +286,16 @@ function CalendarFolded(props: any) {
         if (offsetX < prevOffsetX.current - movementThreshold) {
             scrollEnabledRef.current = false;
             props.setPointDate((prevDate) => {
-                const newDate = subWeeks(prevDate, 1);
-                setTimeout(() => (scrollEnabledRef.current = true), 50); // 타이밍 보장
+                const newDate = new Date(subWeeks(prevDate, 1));
+                setTimeout(() => (scrollEnabledRef.current = true), 50); //변경될 타이밍 보장
                 return newDate;
             });
         //오른쪽으로 스크롤했을 경우
         } else if (offsetX > prevOffsetX.current + movementThreshold) {
             scrollEnabledRef.current = false;
             props.setPointDate((prevDate) => {
-                const newDate = addWeeks(prevDate, 1);
-                setTimeout(() => (scrollEnabledRef.current = true), 50); // 타이밍 보장
+                const newDate = new Date(addWeeks(prevDate, 1));
+                setTimeout(() => (scrollEnabledRef.current = true), 50); //변경될 타이밍 보장
                 return newDate;
             });
         } else {
