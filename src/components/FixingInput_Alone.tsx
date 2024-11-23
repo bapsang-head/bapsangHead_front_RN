@@ -11,7 +11,7 @@ function FixingInput_Alone(props) {
     //props로 넘어온 1차 분석 결과를 data의 초기 값으로 설정한다
     let [data, setData] = useState(props.analysisResult);
 
-    console.log('데이타: ', data);
+    console.log('bapsanghead: 데이타: ', data);
 
     //상위 컴포넌트(FixTextInputScreen)에서 '완료' 버튼이 눌렸을 때만 상위 컴포넌트의 analysisResult를 업데이트 (의존성 배열 확인)
     useEffect(() => {
@@ -66,7 +66,6 @@ function FixingInput_Alone(props) {
         setData((prevData) => {
             const newData = [...prevData];
             newData[index] = { ...newData[index], [option]: value }; // 개별 객체만 업데이트
-            console.log("Updated data:", newData);
             return newData;
         });
     };

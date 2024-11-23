@@ -213,6 +213,7 @@ function CalendarFolded(props: any) {
     //Release 모드에서는 더 엄격한 최적화로 인해 로컬 state를 따로 만들어서 사용하는 것을 권장
     const [localPointDate, setLocalPointDate] = useState(() => new Date(props.pointDate || markedDate)); //props.pointDate 값이 넘어오지 않았다면 초기엔 markedDate로 초기화
 
+    //props.pointDate가 업데이트될 때마다 localPointDate가 업데이트 되어야 한다
     useEffect(() => {
         if (props.pointDate.toISOString() !== localPointDate.toISOString()) {
             setLocalPointDate(new Date(props.pointDate));
