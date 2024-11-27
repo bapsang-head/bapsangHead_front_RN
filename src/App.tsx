@@ -1,6 +1,6 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect } from 'react';
-import { NavigationContainer, useNavigation, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Button, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
@@ -13,6 +13,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'; //iOS M자 �
 //Redux 라이브러리를 사용하기 위해 최상위 컴포넌트에 연결해야 한다. <Provider>와 store.js를 import한다.
 import { Provider } from 'react-redux';
 import store from './store'
+
+import { setNavigationRef } from './apis/customAxios'; // customAxios.tsx에서 가져온 navigation 설정 함수
 
 
 //components(Screen들이라고 생각하면 됩니다) import
@@ -111,6 +113,16 @@ const navTheme = {
 
 //최상위 App Component
 function App(props: any) {
+
+  const navigationRef = useNavigationContainerRef(); //Navigation 참조 생성
+
+  //렌더링 시 최초 1회만 설정
+  useEffect(() => {
+    if (navigationRef) {
+      setNavigationRef(navigationRef);
+      console.log('navigationRef 초기화 완료:', navigationRef);
+    }
+  }, [navigationRef]);
 
   {/* SafeAreaView로 감싸서 상단 StatusBar를 고려한다 (아이폰 M자 탈모 대비)*/}
   return (

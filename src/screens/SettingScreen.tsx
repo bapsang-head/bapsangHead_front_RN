@@ -7,7 +7,7 @@ import { styles } from '../styles/styles';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 
-import axios, {isCancel, AxiosError} from 'axios';
+import customAxios from "../apis/customAxios" //커스텀 Axios 호출
 
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
@@ -353,10 +353,10 @@ async function fetchUserProfile_inSignUp(accessToken: any, dispatch: AppDispatch
     }
 
     try {
-        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile`; //post 요청에 사용할 url 설정
+        const url = `/api/v1/users/profile`; //post 요청에 사용할 url 설정
         if(accessToken) {
             //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다
-            const response = await axios.get(url, {
+            const response = await customAxios.get(url, {
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
@@ -405,7 +405,7 @@ function SettingScreen({Stack, navigation}) {
             return;
         }
         
-        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/auth/register`; //post 요청에 사용할 url 설정
+        const url = `/api/v1/auth/register`; //post 요청에 사용할 url 설정
 
         //request body에 포함될 데이터 정의
         const data = {
@@ -422,7 +422,7 @@ function SettingScreen({Stack, navigation}) {
         //axios를 이용한 post 요청에 관하여 시도하는 try-catch 구문
         try {
 
-            const response = await axios.post(url, data, {
+            const response = await customAxios.post(url, data, {
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${beforeRegisterAccessToken}`, //Authorization 헤더 추가

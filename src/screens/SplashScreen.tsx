@@ -7,6 +7,10 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { format, subMonths, addMonths } from 'date-fns'; //날짜 formatting을 위해 date-fns 함수를 사용할 것임
 
+import customAxios from '../apis/customAxios'; // 커스텀 Axios 가져오기
+import {setNavigationRef} from '../apis/customAxios' //navigation 1회에 최초 초기화
+
+
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from '../store'
@@ -33,15 +37,15 @@ async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
 
         //요청할 url들을 배열로 묶어서 추후 map 함수를 이용해서 한 번에 처리할 것이다
         const urls = [
-            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${previousMonth}`,
-            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${currentMonth}`,
-            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${nextMonth}`,
+            `/api/v1/foods/records/year-month/${previousMonth}`,
+            `/api/v1/foods/records/year-month/${currentMonth}`,
+            `/api/v1/foods/records/year-month/${nextMonth}`,
         ];
 
         if(accessToken) {
             //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다 (3번 요청하므로, map 함수 사용)
             const [prevData, currentData, nextData] = await Promise.all(
-                urls.map(url => axios.get(url, {
+                urls.map(url => customAxios.get(url, {
                     headers: {
                         'Content-Type': 'application/json;charset=UTF-8',
                         'Authorization': `Bearer ${accessToken}`,
@@ -64,10 +68,10 @@ async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
 async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
 
     try {
-        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile`; //post 요청에 사용할 url 설정
+        const url = `/api/v1/users/profile`; //post 요청에 사용할 url 설정
         if(accessToken) {
             //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다
-            const response = await axios.get(url, {
+            const response = await customAxios.get(url, {
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
@@ -162,6 +166,12 @@ async function checkRefreshToken(navigation) {
 function SplashScreen() {
     const navigation = useNavigation(); //navigation 기능 사용을 위한 useNavigation() 훅 사용
 
+    //최초 1회 navigation 객체 초기화
+    useEffect(()=>{
+        setNavigationRef(navigation);
+        console.log('네비게이션 객체 최초 1회 초기화됨!');
+    }, [])
+
     //accountInfo를 초기화하기 위한 코드
     const dispatch: AppDispatch = useDispatch();
 
@@ -200,4 +210,4 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       alignItems: 'center',
     },
-  });
+});

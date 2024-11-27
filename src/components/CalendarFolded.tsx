@@ -24,38 +24,11 @@ import KakaoLogins from '@react-native-seoul/kakao-login';
 
 import { useNavigation, CommonActions } from '@react-navigation/native'
 import axios from 'axios'
+import customAxios from '../apis/customAxios';
 
 const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
-
-async function autoLogOut(navigation, hasLoggedOutRef: MutableRefObject<boolean>) {
-    if(hasLoggedOutRef.current)
-    {
-        return; //이미 로그아웃이 수행되었다면 다시 해당 함수를 수행하지 않음
-    }
-    alert("accessToken이 만료되어 로그아웃을 수행합니다");
-    hasLoggedOutRef.current = true; // 로그아웃 상태로 설정
-  
-    try {
-      const logOutString = await KakaoLogins.logout();
-      if (logOutString != null) {
-        console.log(logOutString);
-        await EncryptedStorage.removeItem('refreshToken');
-        await AsyncStorage.removeItem('accessToken');
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'LoginScreen' }],
-          })
-        );
-      } else {
-        console.log('로그아웃 정상적으로 안됨!');
-      }
-    } catch (error) {
-      console.log(error);
-    }
-}
 
 //서버에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
 function makeMealInputMarking(mealDataForDate: any) {
@@ -163,7 +136,7 @@ async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation, hasLog
 
         const accessToken = await AsyncStorage.getItem('accessToken');
         try {
-            const response = await axios.get(`http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${month}`, {
+            const response = await customAxios.get(`/api/v1/foods/records/year-month/${month}`, {
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${accessToken}`,
@@ -175,15 +148,8 @@ async function fetchMealDataForWeek(weekCalendarDays: Date[], navigation, hasLog
             // 가져온 데이터를 day에 맞춰 필터링하여 바로 반환
             return response.data.find((meal: any) => meal.date === dayFormatted);
         } catch (error) {
-            if(error.response?.status === 401) {
-                console.log("인증 에러: 401 - 자동 로그아웃 수행");
-                await autoLogOut(navigation, hasLoggedOutRef); //자동 로그아웃 함수 호출
-                return null;  // 자동 로그아웃 이후 null 반환
-            } else {
-                console.error('데이터를 가져오는 중 에러 발생: ', error);
-                return null;
-            }
-            
+            console.error('데이터를 가져오는 중 에러 발생: ', error);
+            return null;
         }
     });
 

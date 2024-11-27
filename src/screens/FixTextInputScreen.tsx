@@ -10,6 +10,8 @@ import FixingInputAloneComponent from '@components/FixingInput_Alone'
 import LoadingComponent from '@components/LoadingComponent'
 import SaveCompleteComponent from '@components/SaveCompleteComponent'
 
+import customAxios from '../apis/customAxios' //커스텀 axios
+
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -119,10 +121,10 @@ function FixTextInputScreen(){
     }
 
     //1. 우선 식단 내역 초기화부터 해야 한다 (delete 요청 날려야 한다)
-    const delete_url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/date/${formattedDate}/type/${mealType}`;
+    const delete_url = `/api/v1/foods/records/date/${formattedDate}/type/${mealType}`;
     try {
       if (accessToken) {
-        const response = await axios.delete(delete_url, {
+        const response = await customAxios.delete(delete_url, {
           headers: {
               'Content-Type': 'application/json;charset=UTF-8',
               'Authorization': `Bearer ${accessToken}`,
@@ -135,11 +137,8 @@ function FixTextInputScreen(){
       }
 
     } catch (error) {
-      if (axios.isCancel(error)) {
-        console.warn('요청이 취소되었습니다: ', error.message);
-
       //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
-      } else if (error.message === 'Network Error') { 
+      if (error.message === 'Network Error') { 
         console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
         // 네트워크 오류 발생 시 재시도
         if (retryCount < 5) {
@@ -176,12 +175,12 @@ function FixTextInputScreen(){
     console.log('만든 request body의 date: ', requestBody.date);
     console.log('만든 request body의 mealType: ', requestBody.mealType);
 
-    const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/information`;
+    const url = `/api/v1/foods/information`;
 
     // 음식 정보를 업로드 하는 부분 (POST)
     try {
       if (accessToken) {
-        const response = await axios.post(url, requestBody, {
+        const response = await customAxios.post(url, requestBody, {
           headers: {
               'Content-Type': 'application/json;charset=UTF-8',
               'Authorization': `Bearer ${accessToken}`,
@@ -198,11 +197,8 @@ function FixTextInputScreen(){
       }
 
     } catch (error) {
-      if (axios.isCancel(error)) {
-        console.warn('요청이 취소되었습니다: ', error.message);
-
       //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
-      } else if (error.message === 'Network Error') { 
+      if (error.message === 'Network Error') { 
         console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
         // 네트워크 오류 발생 시 재시도
         if (retryCount < 5) {
@@ -239,7 +235,7 @@ function FixTextInputScreen(){
       const foodAndUnitArray = extractFoodAndUnit(analysisResult); // 배열 생성
 
       const promises = foodAndUnitArray.map(({ name, unit }) => {
-        return axios
+        return customAxios
           .get(url, {
             params: {
               food: name,
@@ -270,11 +266,8 @@ function FixTextInputScreen(){
       
 
     } catch (error) {
-      if (axios.isCancel(error)) {
-        console.warn('요청이 취소되었습니다: ', error.message);
-
       //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
-      } else if (error.message === 'Network Error') { 
+      if (error.message === 'Network Error') { 
         console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
         // 네트워크 오류 발생 시 재시도
         if (retryCount < 5) {

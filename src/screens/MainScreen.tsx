@@ -15,7 +15,8 @@ import ArrowDownIcon from '../assets/svg/arrow_drop_down.svg'
 
 import { useSelector, useDispatch } from "react-redux"
 import { RootState, AppDispatch } from "../store";
-import { setMarkedDate } from '../slices/markedDateSlice'
+
+import customAxios from "../apis/customAxios" //커스텀 Axios 호출
 
 import {
   format,
@@ -23,7 +24,6 @@ import {
   getMonth,
 } from "date-fns"
 
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 //해당 화면에선 로그아웃을 위해 필요한 import들
@@ -38,34 +38,6 @@ import DetailBottomSheetModal from '@components/DetailBottomSheetModal'
 import MainScreenSection from '@components/MainScreenSection';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-//accessToken 만료로 인한 오류 발생 시 자동 로그아웃 수행을 위한 autoLogOut 함수
-async function autoLogOut(navigation) {
-  // 로그아웃이 필요할 때 alert 창을 띄워 알림
-  alert("accessToken이 만료되어 로그아웃을 수행합니다");
-
-  // "Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
-  try {
-      const logOutString = await KakaoLogins.logout(); // 카카오 로그아웃 수행
-      if (logOutString != null) {
-          console.log(logOutString); // 받아온 정보 log에 찍어보기
-          await EncryptedStorage.removeItem('refreshToken'); // refreshToken 삭제
-          await AsyncStorage.removeItem('accessToken'); // accessToken 삭제
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0, //Navigation Stack에 'LoginScreen'만 남도록 설정
-              routes: [
-                {name: 'LoginScreen'}
-              ]
-            })
-          );
-      } else {
-          console.log('로그아웃 정상적으로 안됨!');
-      }
-  } catch (error) {
-      console.log(error);
-  }
-}
 
 //메인화면 Component
 function MainScreen({navigation}) {
@@ -112,8 +84,8 @@ function MainScreen({navigation}) {
 
       //mealTypes 배열을 순회하며 요청을 지속해서 날린다
       for(const mealType of mealTypes) {
-        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/date/${date}/type/${mealType}`;
-        const response = await axios.get(url, {
+        const url = `/api/v1/foods/records/date/${date}/type/${mealType}`;
+        const response = await customAxios.get(url, {
           headers: {
             'Content-Type': 'application/json;charset=UTF-8',
             'Authorization': `Bearer ${accessToken}`,
@@ -129,14 +101,8 @@ function MainScreen({navigation}) {
       }
 
     } catch(error) {
-      if(error.response?.status === 401) {
-        console.log("인증 에러: 401 - 자동 로그아웃 수행");
-        await autoLogOut(navigation); //자동 로그아웃 함수 호출
-        return null;  // 자동 로그아웃 이후 null 반환
-      } else {
-        console.error('오늘의 칼로리를 계산하는 중 에러가 발생했습니다:', error);
-        return null;
-      }
+      console.error('오늘의 칼로리를 계산하는 중 에러가 발생했습니다:', error);
+      return null;
     }
 
     return totalTodayEatenCalories;
@@ -240,7 +206,6 @@ function MainScreen({navigation}) {
 
     fetchCalories();
   }, [markedDate]);
-
 
   return (
     <>

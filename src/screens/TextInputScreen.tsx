@@ -9,7 +9,10 @@ import FixingInputComponent from '@components/FixingInput'
 import LoadingComponent from '@components/LoadingComponent'
 import SaveCompleteComponent from '@components/SaveCompleteComponent'
 
+import customAxios from "../apis/customAxios" //커스텀 Axios 호출
+
 import axios from 'axios';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
@@ -71,17 +74,6 @@ function extractFoodAndUnit(analysisResult: {food: string, unit: string, quantit
   }));
 }
 
-//axios 저장소에 저장되어 있는 회원 정보 초기화
-function initializeAccountInfo()
-{
-  setName(null);
-  setEmail(null);
-  setWeight(null);
-  setHeight(null);
-  setAge(null);
-  setGender(null);
-  setActivityLevel(null);
-}
 
 //'드신 음식을 입력해 주세요' 화면 (실질적으로 프로젝트의 기술 집약 파트)
 function TextInputScreen(){
@@ -174,42 +166,13 @@ function TextInputScreen(){
     setCompleteBtnAvailable(text.trim().length > 0);
   }
 
-  //accessToken 만료로 인한 오류 발생 시 자동 로그아웃 수행을 위한 autoLogOut 함수
-  async function autoLogOut() {
-    // 로그아웃이 필요할 때 alert 창을 띄워 알림
-    alert("accessToken이 만료되어 로그아웃을 수행합니다");
-
-    // "Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
-    try {
-        const logOutString = await KakaoLogins.logout(); // 카카오 로그아웃 수행
-        if (logOutString != null) {
-            console.log(logOutString); // 받아온 정보 log에 찍어보기
-            await EncryptedStorage.removeItem('refreshToken'); // refreshToken 삭제
-            await AsyncStorage.removeItem('accessToken'); // accessToken 삭제
-            initializeAccountInfo(); //redux 저장소에 저장되어 있는 회원 정보 초기화
-            nav.dispatch(
-              CommonActions.reset({
-                index: 0, //Navigation Stack에 'LoginScreen'만 남도록 설정
-                routes: [
-                  {name: 'LoginScreen'}
-                ]
-              })
-            );
-        } else {
-            console.log('로그아웃 정상적으로 안됨!');
-        }
-    } catch (error) {
-        console.log(error);
-    }
-  }
-
   //사용자가 입력한 문장 1차 분석 (재시도 요청에 사용될 변수 retryCount)
   async function userInputAnalysis_First(retryCount = 0, controller) {
     console.log('사용자가 입력한 문장: ', inputText);
 
     try {
       const accessToken = await AsyncStorage.getItem('accessToken'); //AsyncStorage에 있는 accessToken 가져온다 (이게 만료되면 추후 RefreshToken으로 accessToken 재발급 필요할 수도)
-      const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/input` //post 요청에 사용할 url
+      const url = `/api/v1/foods/input` //post 요청에 사용할 url
       
       //request body에 포함될 데이터 정의
       const data = {
@@ -218,7 +181,7 @@ function TextInputScreen(){
 
       if(accessToken) {
         //AsyncStorage에 저장되어 있는 accessToken을 이용해서 식단 문장 1차 분석을 실시할 것임
-        const response = await axios.post(url, data, {
+        const response = await customAxios.post(url, data, {
           headers: {
               'Content-Type': 'application/json;charset=UTF-8',
               'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
@@ -237,10 +200,7 @@ function TextInputScreen(){
       }
 
     } catch(error) {
-      //요청이 취소된 경우(뒤로 가기 버튼 같은 거 눌렀을 때
-      if(axios.isCancel(error)) {
-        console.warn('요청이 취소되었습니다: ', error.message);
-      } else if (error.message === 'Network Error') { //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
+      if (error.message === 'Network Error') { //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
         console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
         // 네트워크 오류 발생 시 재시도
         if (retryCount < 6) {
@@ -266,9 +226,6 @@ function TextInputScreen(){
         } else {
           console.error('재시도 횟수를 초과했습니다.');
         }
-      } else if(error.response?.status === 401){
-        console.log("인증 에러: 401 - 자동 로그아웃 수행");
-        await autoLogOut(); //자동 로그아웃 함수 호출
       } else {
         console.error('post 요청 중 에러 발생: ', error);
       }
@@ -286,12 +243,12 @@ function TextInputScreen(){
     console.log('만든 request body의 mealType: ', requestBody.mealType);
 
     const accessToken = await AsyncStorage.getItem('accessToken'); // AsyncStorage에서 accessToken 가져오기
-    const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/information`;
+    const url = `/api/v1/foods/information`;
 
     // 음식 정보를 업로드 하는 부분 (POST)
     try {
       if (accessToken) {
-        const response = await axios.post(url, requestBody, {
+        const response = await customAxios.post(url, requestBody, {
           headers: {
               'Content-Type': 'application/json;charset=UTF-8',
               'Authorization': `Bearer ${accessToken}`,
@@ -308,11 +265,8 @@ function TextInputScreen(){
       }
 
     } catch (error) {
-      if (axios.isCancel(error)) {
-        console.warn('요청이 취소되었습니다: ', error.message);
-
       //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
-      } else if (error.message === 'Network Error') { 
+      if (error.message === 'Network Error') { 
         console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
         // 네트워크 오류 발생 시 재시도
         if (retryCount < 5) {
@@ -326,9 +280,6 @@ function TextInputScreen(){
         }
       
       //요청이 30초 이상 걸리는 경우에도 재시도를 해야 한다 (없애기)
-      } else if(error.response?.status === 401) {
-        console.log("인증 에러: 401 - 자동 로그아웃 수행");
-        await autoLogOut(); //자동 로그아웃 함수 호출
       } else {
         console.error('음식 정보 업로드 중 에러 발생: ', error);
       }
@@ -341,7 +292,7 @@ function TextInputScreen(){
       const foodAndUnitArray = extractFoodAndUnit(analysisResult); // 배열 생성
 
       const promises = foodAndUnitArray.map(({ food, unit }) => {
-        return axios
+        return customAxios
           .get(url, {
             params: {
               food: food,
@@ -373,11 +324,7 @@ function TextInputScreen(){
       
 
     } catch (error) {
-      if (axios.isCancel(error)) {
-        console.warn('요청이 취소되었습니다: ', error.message);
-
-      //네트워크 오류가 발생한 경우에도 재시도를 해야 한다
-      } else if (error.message === 'Network Error') { 
+      if (error.message === 'Network Error') { 
         console.warn('네트워크 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
         // 네트워크 오류 발생 시 재시도
         if (retryCount < 5) {
@@ -402,9 +349,6 @@ function TextInputScreen(){
         } else {
           console.error('재시도 횟수를 초과했습니다.');
         }
-      } else if(error.response?.status === 401){
-        console.log("인증 에러: 401 - 자동 로그아웃 수행");
-        await autoLogOut(); //자동 로그아웃 함수 호출
       } else {
         console.error('음식 정보 조회 중 에러 발생: ', error);
       }
@@ -415,11 +359,11 @@ function TextInputScreen(){
       let markedMonth = format(new Date(markedDate), 'yyyy-MM'); //기준 날짜를 YYYY-MM 형식으로 formatting
 
       //markedMonth를 url에 집어넣어 추후 axios를 활용하여 get 요청을 날릴 것이다
-      const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${markedMonth}`
+      const url = `/api/v1/foods/records/year-month/${markedMonth}`
 
       if(accessToken) {
           //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 axios에 월별 입력 현황을 update 한다
-          const response = await axios.get(url, {
+          const response = await customAxios.get(url, {
             headers: {
                 'Content-Type': 'application/json;charset=UTF-8',
                 'Authorization': `Bearer ${accessToken}`,
@@ -434,13 +378,7 @@ function TextInputScreen(){
           console.log(markedMonth, '기준으로 잘 불러옴!');
       }
     } catch (error) {
-
-      if(error.response?.status === 401){
-        console.log("인증 에러: 401 - 자동 로그아웃 수행");
-        await autoLogOut(); //자동 로그아웃 함수 호출
-      } else {
-        console.error('Meal Input 데이터 불러오는 중 기타 에러 발생: ', error);
-      }
+      console.error('Meal Input 데이터 불러오는 중 기타 에러 발생: ', error);
     }
   }
 

@@ -1,14 +1,10 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import { View, Text, Pressable, Image, TouchableOpacity } from 'react-native';
-import { Calendar, CalendarList, LocaleConfig, ExpandableCalendar, CalendarProvider } from 'react-native-calendars';
-import BottomSheet from '@gorhom/bottom-sheet';
-import moment from 'moment';
-import { styles } from '../styles/styles';
-import axios, {isCancel, AxiosError} from 'axios';
 
 import * as KakaoLogins from "@react-native-seoul/kakao-login";
+
+import customAxios from '../apis/customAxios'; // 커스텀 Axios 가져오기
 
 //redux-toolkit을 사용하기 위한 import
 import { useSelector, useDispatch } from "react-redux"
@@ -27,10 +23,10 @@ async function fetchUserProfile(accessToken: any, dispatch: AppDispatch) {
 
     try {
 
-        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile`; //post 요청에 사용할 url 설정
+        const url = `/api/v1/users/profile`; //post 요청에 사용할 url 설정
         if(accessToken) {
             //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다
-            const response = await axios.get(url, {
+            const response = await customAxios.get(url, {
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가
@@ -68,15 +64,15 @@ async function fetchMealInput(accessToken: any, dispatch: AppDispatch) {
 
         //요청할 url들을 배열로 묶어서 추후 map 함수를 이용해서 한 번에 처리할 것이다
         const urls = [
-            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${previousMonth}`,
-            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${currentMonth}`,
-            `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${nextMonth}`,
+            `/api/v1/foods/records/year-month/${previousMonth}`,
+            `/api/v1/foods/records/year-month/${currentMonth}`,
+            `/api/v1/foods/records/year-month/${nextMonth}`,
         ];
 
         if(accessToken) {
             //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 회원 정보를 불러온다 (3번 요청하므로, map 함수 사용)
             const [prevData, currentData, nextData] = await Promise.all(
-                urls.map(url => axios.get(url, {
+                urls.map(url => customAxios.get(url, {
                     headers: {
                         'Content-Type': 'application/json;charset=UTF-8',
                         'Authorization': `Bearer ${accessToken}`,
@@ -115,13 +111,12 @@ function LoginScreen({navigation})
         navigation.replace('TabNavigator');
     }
 
-
     //카카오 로그인 수행을 위한 함수 (async 함수)
     async function loginWithKakao() {
         console.log("bapsanghead: 버튼 눌림");
 
         let provider = 'kakao'; //oAuth 제공자 이름(provider)를 설정한다
-        const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/auth/login/${provider}`; //post 요청에 사용할 url 설정
+        const url = `/api/v1/auth/login/${provider}`; //post 요청에 사용할 url 설정
 
 
         //"Possible Unhandled promise rejection" 오류 해결을 위해 try-catch 구문을 사용한다
@@ -140,7 +135,7 @@ function LoginScreen({navigation})
 
                 //axios를 이용한 post 요청에 관하여 시도하는 try-catch 구문
                 try {
-                    const response = await axios.post(url, data, {
+                    const response = await customAxios.post(url, data, {
                         headers: {
                             'Content-Type': 'application/json;charset=UTF-8',
                         },

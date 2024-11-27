@@ -17,6 +17,7 @@ import FixDietIcon from '../assets/svg/fix_diet.svg'
 import { parseISO, format } from 'date-fns';
 
 import axios from 'axios';
+import customAxios from '../apis/customAxios';
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 //해당 화면에선 로그아웃을 위해 필요한 import들
@@ -84,10 +85,10 @@ async function fetchMealInfo(eatingTime: string, formattedDate: string, navigati
 
   try {
       const accessToken = await AsyncStorage.getItem('accessToken'); //accessToken을 우선 가져온다
-      const url = `http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/date/${formattedDate}/type/${mealType}`; //get 요청에 사용할 url 설정
+      const url = `/api/v1/foods/records/date/${formattedDate}/type/${mealType}`; //get 요청에 사용할 url 설정
       if(accessToken) {
           //AsyncStorage에 저장되어 있는 accessToken(매개변수로 넘어올 것임)을 이용해서 response를 받아올 것이다
-          const response = await axios.get(url, {
+          const response = await customAxios.get(url, {
               headers: {
                   'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': `Bearer ${accessToken}`, //Authorization 헤더 추가

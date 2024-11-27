@@ -25,40 +25,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import EncryptedStorage from 'react-native-encrypted-storage';
 import KakaoLogins from '@react-native-seoul/kakao-login';
 import axios from 'axios'
+import customAxios from '../apis/customAxios'
 import { setMealInput } from '../slices/mealInputSlice'; // mealInputSlice 파일에서 setMealInput 액션 가져오기
 
 
 const windowWidth = Dimensions.get('window').width;
 const marginHorizontal = 20;
 const contentWidth = windowWidth - marginHorizontal * 2;
-
-async function autoLogOut(navigation, hasLoggedOutRef: MutableRefObject<boolean>) {
-    if(hasLoggedOutRef.current)
-    {
-        return; //이미 로그아웃이 수행되었다면 다시 해당 함수를 수행하지 않음
-    }
-    alert("accessToken이 만료되어 로그아웃을 수행합니다");
-    hasLoggedOutRef.current = true; // 로그아웃 상태로 설정
-  
-    try {
-      const logOutString = await KakaoLogins.logout();
-      if (logOutString != null) {
-        console.log(logOutString);
-        await EncryptedStorage.removeItem('refreshToken');
-        await AsyncStorage.removeItem('accessToken');
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'LoginScreen' }],
-          })
-        );
-      } else {
-        console.log('로그아웃 정상적으로 안됨!');
-      }
-    } catch (error) {
-      console.log(error);
-    }
-}
 
 //redux에 저장되어 있는 mealInputSlice 값을 이용해서 달력에 마킹을 해주어야 한다
 function makeMealInputMarking(mealDataForDate: any) {
@@ -233,7 +206,7 @@ async function checkAndFetchMealData(
         const accessToken = await AsyncStorage.getItem('accessToken'); //accessToken을 우선 가져온다
       
         try {
-            const response = await axios.get(`http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/foods/records/year-month/${month}`, {
+            const response = await customAxios.get(`/api/v1/foods/records/year-month/${month}`, {
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${accessToken}`,
@@ -246,14 +219,8 @@ async function checkAndFetchMealData(
             return response.data[month];
 
         } catch (error) {
-            if(error.response?.status === 401) {
-                console.log("인증 에러: 401 - 자동 로그아웃 수행");
-                await autoLogOut(navigation, hasLoggedOutRef); //자동 로그아웃 함수 호출
-                return null;  // 자동 로그아웃 이후 null 반환
-            } else {
-                console.error('데이터를 가져오는 중 에러 발생: ', error);
-                return null;
-            }
+            console.error('데이터를 가져오는 중 에러 발생: ', error);
+            return null;
         }
     } else { //있으면 걍 넘겨
         console.log('bapsanghead:', month,'Redux에 데이터가 있어서 여기 옴');

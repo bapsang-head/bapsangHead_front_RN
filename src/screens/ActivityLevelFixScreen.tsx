@@ -5,6 +5,7 @@ import { View, Text, TextInput, TouchableOpacity, Dimensions} from 'react-native
 import { styles } from '../styles/styles';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import customAxios from '../apis/customAxios';
 
 import NoExerciseIcon from '../assets/svg/airline_seat_individual_suite.svg';
 import LittleExerciseIcon from '../assets/svg/accessibility_new.svg';
@@ -48,8 +49,8 @@ function ActivityLevelFixScreen({route, navigation, appState}) {
 
         try {
             //PATCH 요청을 보낸다
-            const response = await axios.patch(
-                'http://ec2-15-164-110-7.ap-northeast-2.compute.amazonaws.com:8080/api/v1/users/profile',
+            const response = await customAxios.patch(
+                '/api/v1/users/profile',
                 updatedData, //변경할 데이터를 요청에 포함한다
                 {
                     headers: {
