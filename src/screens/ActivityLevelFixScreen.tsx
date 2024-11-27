@@ -1,7 +1,7 @@
 //Libarary or styles import
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, TextInput, TouchableOpacity, Dimensions} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Dimensions, Alert} from 'react-native';
 import { styles } from '../styles/styles';
 import { MaterialCommunityIcons as Icon, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -76,7 +76,16 @@ function ActivityLevelFixScreen({route, navigation, appState}) {
     //'완료' 버튼을 눌렀을 때의 동작 수행
     const handleDonePress = () => {
         updateUserActivityLevel();
-        alert('유저 활동량 수정이 완료되었습니다.');
+        Alert.alert(
+            '수정 완료', // Alert의 제목
+            '유저 활동량 수정이 완료되었습니다.', // Alert의 내용
+            [
+                {
+                    text: '확인', // 버튼 텍스트
+                    onPress: () => console.log('확인 버튼 클릭됨'), // 버튼 클릭 시 동작
+                },
+            ]
+        );
     }
 
     //useLayoutEffect()를 통해서 header 설정을 TextInputScreen 내부에서 수행한다
