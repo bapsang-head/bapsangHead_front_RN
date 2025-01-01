@@ -73,13 +73,13 @@ customAxios.interceptors.response.use(
 
         //요청이 취소된 경우
         if (axios.isCancel(error)) {
-            console.warn('요청이 취소되었습니다:', error.message);
+            console.warn('bapsanghead: 요청이 취소되었습니다:', error.message);
             return Promise.reject(error);
         }
 
         // 네트워크 오류인 경우 (서버 응답 없음)
         if (!error.response) {
-            console.error('네트워크 오류 발생:', error.message);
+            console.error('bapsanghead: 네트워크 오류 발생:', error.message);
             Alert.alert(
                 '네트워크 오류',
                 '네트워크 연결 상태를 확인해주세요.',
