@@ -56,13 +56,7 @@
 
 ### 홈 화면
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/bd666e9d-1a1f-4e22-829b-593ecd4566d4" height="440">
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/user-attachments/assets/41fb5169-26cf-40bf-ac66-5620f849343a" height="440">
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/user-attachments/assets/ab3eed59-33ec-4f41-af09-81198f381d4d" height="440">
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/user-attachments/assets/706f65d2-1d91-44eb-af98-1cd9d12892e8" height="440">
+  <img src="https://github.com/user-attachments/assets/667f279e-1362-4d79-b8a4-9c976c27e7c3" style="max-width: 100%; height: auto;" />
 </p>
 
 - 날짜별 식단 기록 조회 (주차별, 월간별 캘린더 활용)
@@ -71,17 +65,13 @@
 
 ### 식단 입력 & 분석
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3392b123-f1b1-4965-9992-a284c0d0cb8c" height="380" />
-  <img src="https://github.com/user-attachments/assets/1a2963aa-4167-4bec-90fc-59837c780ce6" height="380" />
-  <img src="https://github.com/user-attachments/assets/70361da2-5e5b-4e4d-9806-737faaee73dc" height="380" />
-  <img src="https://github.com/user-attachments/assets/a4b78a2e-2746-40be-82fa-326a51ffd938" height="380" />
-  <img src="https://github.com/user-attachments/assets/485e4048-8b57-443e-88f4-74825de1b2e4" height="380" />
+  <img src="https://github.com/user-attachments/assets/96eb463a-5ca0-4b13-8551-442172ddc17e" style="max-width: 100%; height: auto;" />
 </p>
 
 - 식단을 자유로운 형식의 문장으로 입력 *(ex. "난 오늘 BBQ 황금올리브 1마리 야무지게 먹었어")*
-- KoBERT + GPT-4o 기반 NER을 통해 음식명, 수량, 단위를 추출 -> 식단 1차 분석
+- KoBERT + GPT-4o 기반 NER을 통해 음식명, 수량, 단위를 추출 -> **식단 1차 분석**
 - 1차 분석 후, 분석 결과를 사용자에게 노출. 해당 결과에 대해서 사용자가 정보 수정, 추가, 삭제 가능
-- 사용자가 수정한 정보를 바탕으로 2차 분석 진행 <br/>
+- 사용자가 수정한 정보를 바탕으로 **식단 2차 분석** 진행 <br/>
   - 시스템 DB에 존재하는 식품이라면, 캐싱된 데이터 활용 <br/>
   - 시스템 DB에 존재하는 식품이 아니라면, FatSecret DB(외부 API 활용)에 있는 식품 DB 정보 활용 <br/>
   - FatSecret DB에도 없는 정보라면, 웹 검색 API를 활용해서 정보 수집 <br/>
