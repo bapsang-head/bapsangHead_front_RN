@@ -208,7 +208,7 @@ AI는 설계 초안 작성이나 아이디어 참고 등 **보조적 도구**로
 ┣ 📄 app.config.js                # Expo 설정 (Kakao SDK 연동)
 ┣ 📄 package.json                 # 의존성 관리
 ┣ 📄 tsconfig.json                # TypeScript 설정
-┗ 📄 README.md                    # 본 문서
+┗ 📄 README.md                    # README를 위한 Markdown 파일
 ```
 
 <br/>
